@@ -1,0 +1,3 @@
+project_id = "ten-second-class"
+[functions.ten-second]
+verify_jwt = false
