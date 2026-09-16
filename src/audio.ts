@@ -23,7 +23,7 @@ function downsample(channel: Float32Array, sourceRate: number) {
 }
 
 export async function recordingToWav(recording: Blob) {
-  const context = new AudioContext();
+  const context = new AudioContext({ sampleRate: TARGET_SAMPLE_RATE });
   try {
     const decoded = await context.decodeAudioData(
       await recording.arrayBuffer(),

@@ -14,5 +14,7 @@ for _ in range(24):
  time.sleep(3)
 for r in d['responses']:print(r['status'],r.get('debug_error'),json.dumps(r['result'],ensure_ascii=False),flush=True)
 assert all(r['status']=='done'for r in d['responses'])
+silent=next(r for r in d['responses'] if r['member_id']==next(m['id'] for m in d['members'] if m['student_id']=='TEST-B'))
+assert silent['result']['level']=='unscorable' and silent['result']['score'] is None
 call('class_status',classId=c['id'],status='ended')
 Path('/private/tmp/ten-second-verification.json').write_text(json.dumps(d,ensure_ascii=False))

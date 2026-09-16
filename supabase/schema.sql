@@ -34,4 +34,18 @@ end $$;
 revoke all on function public.ts_open_question(uuid,uuid) from public,anon,authenticated;
 grant execute on function public.ts_open_question(uuid,uuid) to service_role;
 alter table public.ts_responses add column if not exists debug_error text;
+create or replace function public.ts_limit_class_rows() returns trigger language plpgsql set search_path='' as $$
+begin
+ perform 1 from public.ts_classes where id=new.class_id for update;
+ if TG_TABLE_NAME='ts_members' then
+   if (select count(*) from public.ts_members where class_id=new.class_id)>=150 then raise exception '本課堂已達150人上限'; end if;
+ else
+   if (select count(*) from public.ts_questions where class_id=new.class_id)>=80 then raise exception '本課堂已達80題上限'; end if;
+ end if;
+ return new;
+end $$;
+drop trigger if exists ts_member_limit on public.ts_members;
+create trigger ts_member_limit before insert on public.ts_members for each row execute function public.ts_limit_class_rows();
+drop trigger if exists ts_question_limit on public.ts_questions;
+create trigger ts_question_limit before insert on public.ts_questions for each row execute function public.ts_limit_class_rows();
 commit;

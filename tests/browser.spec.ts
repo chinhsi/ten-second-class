@@ -52,6 +52,7 @@ test("student auto-stops at ten seconds and uploads a bounded WAV", async ({
   page,
 }) => {
   let submitted: any = null;
+  let questionStatus = "active";
   await page.route(endpoint, async (route) => {
     const b = route.request().postDataJSON();
     let data: any = {};
@@ -66,7 +67,7 @@ test("student auto-stops at ten seconds and uploads a bounded WAV", async ({
             id: "q",
             mode: "answer",
             prompt: "為什麼要查證？",
-            status: "active",
+            status: questionStatus,
           },
         ],
         responses: submitted
@@ -87,9 +88,11 @@ test("student auto-stops at ten seconds and uploads a bounded WAV", async ({
   await page.getByRole("button", { name: "加入課堂", exact: true }).click();
   await page.getByRole("button", { name: "開始錄音" }).click();
   await expect(page.getByRole("button", { name: "提早送出" })).toBeVisible();
-  await expect(page.getByText("已收到你的錄音", { exact: false })).toBeVisible({
-    timeout: 20000,
-  });
+  questionStatus = "closed"; // Switching questions must not cut off an ongoing recording.
+  await expect.poll(() => submitted, { timeout: 20000 }).not.toBeNull();
+  await expect(
+    page.getByText("錄音已收到，正在評分。", { exact: true }),
+  ).toBeVisible();
   expect(submitted).toBeTruthy();
   const wav = Buffer.from(submitted.audio, "base64");
   expect(wav.length).toBeLessThanOrEqual(320044);
@@ -99,4 +102,81 @@ test("student auto-stops at ten seconds and uploads a bounded WAV", async ({
     path: "/private/tmp/ten-second-student.png",
     fullPage: true,
   });
+});
+
+test("teacher sees mixed statuses, filters missing students, retries and exports", async ({
+  page,
+}) => {
+  const members = Array.from({ length: 5 }, (_, i) => ({
+    id: "m" + i,
+    name: "學生" + i,
+    student_id: "S" + i,
+  }));
+  const responses = [
+    {
+      id: "r0",
+      member_id: "m0",
+      question_id: "q",
+      status: "done",
+      path: "a.wav",
+      result: {
+        score: 5,
+        level: "understood",
+        transcript: "AI 可能出錯",
+        feedback: "理解正確",
+      },
+    },
+    {
+      id: "r1",
+      member_id: "m1",
+      question_id: "q",
+      status: "failed",
+      path: "b.wav",
+    },
+    {
+      id: "r2",
+      member_id: "m2",
+      question_id: "q",
+      status: "processing",
+      path: "c.wav",
+      submitted_at: "2026-01-01T00:00:00Z",
+    },
+    { id: "r3", member_id: "m3", question_id: "q", status: "recording" },
+  ];
+  const retried: string[] = [];
+  await page.route(endpoint, async (route) => {
+    const b = route.request().postDataJSON();
+    let data: any = {};
+    if (b.action === "classes")
+      data = [{ id: "c", title: "混合狀態", code: "CODE", status: "active" }];
+    if (b.action === "dashboard")
+      data = {
+        members,
+        responses,
+        questions: [
+          { id: "q", prompt: "說明原因", mode: "answer", status: "active" },
+        ],
+      };
+    if (b.action === "retry") {
+      retried.push(b.id);
+      data = { ok: true };
+    }
+    await route.fulfill({ json: data });
+  });
+  await page.goto("/ten-second-class/");
+  await page.getByLabel("管理密碼").fill("test");
+  await page.getByRole("button", { name: "進入備課" }).click();
+  await page.getByRole("button", { name: "混合狀態 進行中" }).click();
+  await expect(page.locator("tbody tr")).toHaveCount(5);
+  await expect(page.getByText("理解正確")).toBeVisible();
+  await page.getByRole("button", { name: "本題未答", exact: true }).click();
+  await expect(page.locator("tbody tr")).toHaveCount(2);
+  await page.getByRole("button", { name: "本堂尚未提交", exact: true }).click();
+  await expect(page.locator("tbody tr")).toHaveCount(2);
+  await page.getByRole("button", { name: "重試全部未完成評分" }).click();
+  await expect.poll(() => retried.length).toBe(2);
+  expect(retried.sort()).toEqual(["r1", "r2"]);
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "下載紀錄" }).click();
+  expect((await download).suggestedFilename()).toBe("混合狀態-作答紀錄.csv");
 });

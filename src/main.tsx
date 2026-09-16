@@ -12,7 +12,8 @@ async function api(action: string, data: any = {}) {
     body: JSON.stringify({ action, ...data }),
   });
   const j = await r.json();
-  if (!r.ok || j.error) throw Error(j.error || "連線失敗");
+  if (!r.ok || j.error)
+    throw Object.assign(Error(j.error || "連線失敗"), { code: j.code });
   return j;
 }
 const labels: Record<string, string> = {
@@ -69,12 +70,19 @@ function Teacher() {
   const [audio, setAudio] = useState("");
   const [tab, setTab] = useState("all");
   const call = (a: string, b: any = {}) => api(a, { owner, ...b });
-  async function refresh(id = cls?.id) {
+  const refreshVersion = useRef(0);
+  const activeClass = useRef<string | undefined>(undefined);
+  async function refresh(id = activeClass.current) {
+    const version = ++refreshVersion.current;
+    activeClass.current = id;
     const cs = await call("classes");
+    const dashboard = id ? await call("dashboard", { classId: id }) : null;
+    if (version !== refreshVersion.current) return;
     setClasses(cs);
+    setError("");
     if (id) {
       setCls(cs.find((c: any) => c.id === id));
-      setD(await call("dashboard", { classId: id }));
+      setD(dashboard);
     }
   }
   async function run(fn: () => Promise<void>) {
@@ -142,7 +150,7 @@ function Teacher() {
               (v: any) =>
                 '"' +
                 String(v)
-                  .replace(/^[=+@-]/, "'$&")
+                  .replace(/^[\s]*[=+@-]|^[\t\r\n]/, "'$&")
                   .replaceAll('"', '""') +
                 '"',
             )
@@ -154,7 +162,7 @@ function Teacher() {
     );
     const a = document.createElement("a");
     a.href = u;
-    a.download = `${cls.title}-作答紀錄.csv`;
+    a.download = `${cls.title.replace(/[\/:*?"<>|]/g, "_")}-作答紀錄.csv`;
     a.click();
     URL.revokeObjectURL(u);
   }
@@ -318,6 +326,26 @@ function Teacher() {
                 )}
                 <button className="quiet" onClick={download}>
                   下載紀錄
+                </button>
+                <button
+                  className="quiet"
+                  disabled={busy}
+                  onClick={() => {
+                    if (
+                      confirm(
+                        "確定刪除整個課堂、學生紀錄及錄音？此操作無法復原。",
+                      )
+                    )
+                      run(async () => {
+                        await call("delete_class", { classId: cls.id });
+                        activeClass.current = undefined;
+                        setCls(null);
+                        setD({ questions: [], members: [], responses: [] });
+                        await refresh();
+                      });
+                  }}
+                >
+                  刪除課堂
                 </button>
               </div>
             </div>
@@ -581,6 +609,34 @@ function Teacher() {
                 </div>
               )}
               <div className="actions filters">
+                <button
+                  className="secondary"
+                  disabled={
+                    busy ||
+                    !d.responses.some(
+                      (r: any) =>
+                        r.path &&
+                        (r.status === "failed" ||
+                          (r.status === "processing" &&
+                            Date.now() - Date.parse(r.submitted_at) > 90000)),
+                    )
+                  }
+                  onClick={() =>
+                    run(async () => {
+                      for (const r of d.responses.filter(
+                        (r: any) =>
+                          r.path &&
+                          (r.status === "failed" ||
+                            (r.status === "processing" &&
+                              Date.now() - Date.parse(r.submitted_at) > 90000)),
+                      ))
+                        await call("retry", { id: r.id });
+                      await refresh();
+                    })
+                  }
+                >
+                  重試全部未完成評分
+                </button>
                 {[
                   ["all", "全部"],
                   ["missing", "本題未答"],
@@ -596,7 +652,16 @@ function Teacher() {
                 ))}
               </div>
               <p className="muted">名單以已掃碼加入的學生為準。</p>
-              {audio && <audio controls autoPlay src={audio} />}
+              {audio && (
+                <audio
+                  controls
+                  autoPlay
+                  src={audio}
+                  onError={() =>
+                    setError("播放連結已失效，請再按一次該學生的播放按鈕。")
+                  }
+                />
+              )}
               <div className="table-wrap">
                 <table>
                   <thead>
@@ -719,13 +784,25 @@ function Student({ code }: { code: string }) {
   const [id, setId] = useState("");
   const [info, setInfo] = useState<any>(null);
   const [state, setState] = useState<any>(null);
+  const [recordingQuestion, setRecordingQuestion] = useState<any>(null);
   const [joined, setJoined] = useState(
     localStorage.getItem("ts-joined-" + code) === "yes",
   );
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const call = (a: string, b: any = {}) => api(a, { code, token, ...b });
-  const refresh = async () => setState(await call("state"));
+  const refresh = async () => {
+    try {
+      setState(await call("state"));
+      setError("");
+    } catch (e) {
+      if ((e as any).code === "REJOIN") {
+        localStorage.removeItem("ts-joined-" + code);
+        setJoined(false);
+      }
+      throw e;
+    }
+  };
   useEffect(() => {
     call("peek")
       .then(setInfo)
@@ -741,9 +818,10 @@ function Student({ code }: { code: string }) {
     return () => clearInterval(t);
   }, [joined, code]);
   const q =
-    state?.class.status === "active"
+    recordingQuestion ||
+    (state?.class.status === "active"
       ? state?.questions.find((q: any) => q.status === "active")
-      : null;
+      : null);
   return (
     <main className="student">
       <div className="eyebrow">YOUR VOICE MATTERS</div>
@@ -811,7 +889,11 @@ function Student({ code }: { code: string }) {
               response={state?.responses.find(
                 (r: any) => r.question_id === q.id,
               )}
-              onSubmitted={refresh}
+              onRecording={() => setRecordingQuestion(q)}
+              onSubmitted={async () => {
+                await refresh();
+                setRecordingQuestion(null);
+              }}
             />
           ) : (
             <div className="card waiting">
@@ -862,11 +944,13 @@ function Recorder({
   call,
   response,
   onSubmitted,
+  onRecording,
 }: {
   q: any;
   call: (a: string, b?: any) => Promise<any>;
   response: any;
   onSubmitted: () => Promise<void>;
+  onRecording: () => void;
 }) {
   const [phase, setPhase] = useState("idle");
   const [left, setLeft] = useState(10);
@@ -912,6 +996,10 @@ function Recorder({
         return;
       }
       const ticket = await call("start", { questionId: q.id });
+      if (!alive.current) {
+        stream.current.getTracks().forEach((t) => t.stop());
+        return;
+      }
       if (Date.now() - Date.parse(ticket.started_at) > 110000)
         throw Error("本題錄音已逾時，請告知老師");
       const chunks: Blob[] = [];
@@ -952,6 +1040,7 @@ function Recorder({
         }
       };
       rec.start();
+      onRecording();
       setPhase("recording");
       const at = performance.now();
       timer.current = setInterval(() => {
