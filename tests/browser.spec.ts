@@ -180,3 +180,111 @@ test("teacher sees mixed statuses, filters missing students, retries and exports
   await page.getByRole("button", { name: "下載紀錄" }).click();
   expect((await download).suggestedFilename()).toBe("混合狀態-作答紀錄.csv");
 });
+
+test("failed upload survives reload and closed question, without rerecording", async ({
+  page,
+}) => {
+  let attempts: string[] = [];
+  let closed = false;
+  let received = false;
+  await page.route(endpoint, async (route) => {
+    const b = route.request().postDataJSON();
+    let data: any = {};
+    if (b.action === "peek") data = { title: "斷線復原", status: "active" };
+    if (b.action === "join") data = { id: "m" };
+    if (b.action === "state")
+      data = {
+        class: { title: "斷線復原", status: "active" },
+        member: { name: "TEST" },
+        questions: [
+          {
+            id: "recover",
+            mode: "answer",
+            prompt: "一句話",
+            status: closed ? "closed" : "active",
+          },
+          ...(closed
+            ? [
+                {
+                  id: "recover-next",
+                  mode: "answer",
+                  prompt: "下一題",
+                  status: "active",
+                },
+              ]
+            : []),
+        ],
+        responses: received
+          ? [{ id: "r", question_id: "recover", status: "processing" }]
+          : [],
+      };
+    if (b.action === "start") data = { started_at: new Date().toISOString() };
+    if (b.action === "submit") {
+      attempts.push(b.audio);
+      if (attempts.length === 1) {
+        await route.abort("failed");
+        return;
+      }
+      received = true;
+      data = { ok: true };
+    }
+    await route.fulfill({ json: data });
+  });
+  await page.goto("/ten-second-class/#join=RECOVER");
+  await page.getByLabel("姓名", { exact: true }).fill("TEST");
+  await page.getByLabel("學號").fill("R");
+  await page.getByRole("button", { name: "加入課堂", exact: true }).click();
+  await page.getByRole("button", { name: "開始錄音" }).click();
+  await expect(
+    page.getByRole("button", { name: "重新上傳這段錄音" }),
+  ).toBeVisible({ timeout: 20000 });
+  closed = true;
+  await page.reload();
+  await page.getByRole("button", { name: "重新上傳這段錄音" }).click();
+  await expect.poll(() => received).toBe(true);
+  expect(attempts).toHaveLength(2);
+  expect(attempts[0]).toBe(attempts[1]);
+  await expect(page.getByRole("button", { name: "開始錄音" })).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(() => sessionStorage.getItem("ts-recording-recover")),
+    )
+    .toBeNull();
+});
+
+test("student can discard a stuck old recording and reach the new question", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("ts-joined-DISCARD", "yes");
+    sessionStorage.setItem("ts-recording-old", "stored-audio");
+  });
+  await page.route(endpoint, async (route) => {
+    const b = route.request().postDataJSON();
+    let data: any = { title: "復原", status: "active" };
+    if (b.action === "state")
+      data = {
+        class: { title: "復原", status: "active" },
+        member: { name: "TEST" },
+        questions: [
+          { id: "old", mode: "answer", prompt: "上一題", status: "closed" },
+          { id: "new", mode: "answer", prompt: "新的題目", status: "active" },
+        ],
+        responses: [],
+      };
+    await route.fulfill({ json: data });
+  });
+  await page.goto("/ten-second-class/#join=DISCARD");
+  await expect(
+    page.getByRole("heading", { name: "上一題", exact: true }),
+  ).toBeVisible();
+  page.on("dialog", (d) => d.accept());
+  await page.getByRole("button", { name: "捨棄錄音，繼續下一題" }).click();
+  await expect(
+    page.getByRole("heading", { name: "新的題目", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "開始錄音" })).toBeVisible();
+  expect(
+    await page.evaluate(() => sessionStorage.getItem("ts-recording-old")),
+  ).toBeNull();
+});

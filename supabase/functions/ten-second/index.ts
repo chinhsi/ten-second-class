@@ -622,9 +622,13 @@ Deno.serve(async (req) => {
           .eq("member_id", member.id)
           .single(),
       );
-      if (r.status !== "recording") return reply({ ok: true });
-      if (Date.now() - Date.parse(r.started_at) > 120000)
-        throw Error("錄音上傳已逾時，請老師另開一題");
+      if (r.status !== "recording") {
+        if (!r.path)
+          throw Error("這段錄音已被老師取消；請捨棄錄音後繼續下一題。");
+        return reply({ ok: true });
+      }
+      if (Date.now() - Date.parse(r.started_at) > 86400000)
+        throw Error("錄音已超過24小時，請老師另開一題");
       // Fixed PCM WAV validation: never trust browser duration metadata.
       if (typeof b.audio !== "string" || b.audio.length > 426728)
         throw Error("錄音不能超過10秒");

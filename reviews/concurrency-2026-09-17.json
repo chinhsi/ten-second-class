@@ -1,0 +1,13 @@
+{
+  "date": "2026-09-17",
+  "participants": 30,
+  "concurrency": 30,
+  "wav_seconds": 10,
+  "received": 30,
+  "completed": 30,
+  "ai_calls": 0,
+  "receipt_median_seconds": 4.36,
+  "receipt_p95_seconds": 6.02,
+  "all_completed_seconds": 8.54,
+  "scope": "Concurrent HTTP, storage, status processing; silence gate, not Gemini capacity."
+}

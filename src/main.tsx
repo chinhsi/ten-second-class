@@ -16,6 +16,14 @@ async function api(action: string, data: any = {}) {
     throw Object.assign(Error(j.error || "連線失敗"), { code: j.code });
   return j;
 }
+const pendingKey = (id: string) => "ts-recording-" + id;
+function savedRecording(id: string): string | null {
+  try {
+    return sessionStorage.getItem(pendingKey(id));
+  } catch {
+    return null;
+  }
+}
 const labels: Record<string, string> = {
   draft: "備課中",
   active: "進行中",
@@ -819,6 +827,13 @@ function Student({ code }: { code: string }) {
   }, [joined, code]);
   const q =
     recordingQuestion ||
+    state?.questions.find(
+      (question: any) =>
+        savedRecording(question.id) &&
+        !state.responses.some(
+          (r: any) => r.question_id === question.id && r.status !== "recording",
+        ),
+    ) ||
     (state?.class.status === "active"
       ? state?.questions.find((q: any) => q.status === "active")
       : null);
@@ -890,6 +905,7 @@ function Student({ code }: { code: string }) {
                 (r: any) => r.question_id === q.id,
               )}
               onRecording={() => setRecordingQuestion(q)}
+              onDiscard={() => setRecordingQuestion(null)}
               onSubmitted={async () => {
                 await refresh();
                 setRecordingQuestion(null);
@@ -945,17 +961,23 @@ function Recorder({
   response,
   onSubmitted,
   onRecording,
+  onDiscard,
 }: {
   q: any;
   call: (a: string, b?: any) => Promise<any>;
   response: any;
   onSubmitted: () => Promise<void>;
   onRecording: () => void;
+  onDiscard: () => void;
 }) {
-  const [phase, setPhase] = useState("idle");
+  const [phase, setPhase] = useState(() =>
+    savedRecording(q.id) ? "retry" : "idle",
+  );
   const [left, setLeft] = useState(10);
   const [error, setError] = useState("");
-  const [pending, setPending] = useState<string | null>(null);
+  const [pending, setPending] = useState<string | null>(() =>
+    savedRecording(q.id),
+  );
   const recorder = useRef<MediaRecorder | null>(null);
   const stream = useRef<MediaStream | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -975,6 +997,9 @@ function Recorder({
       await call("submit", { questionId: q.id, audio });
       setPhase("sent");
       setPending(null);
+      try {
+        sessionStorage.removeItem(pendingKey(q.id));
+      } catch {}
       await onSubmitted();
     } catch (e) {
       setError((e as Error).message);
@@ -1033,6 +1058,11 @@ function Recorder({
           for (const b of bytes) bin += String.fromCharCode(b);
           const audio = btoa(bin);
           setPending(audio);
+          try {
+            sessionStorage.setItem(pendingKey(q.id), audio);
+          } catch {
+            setError("瀏覽器暫存空間不足，請保持此頁直到上傳完成。");
+          }
           await upload(audio);
         } catch (e) {
           setError((e as Error).message);
@@ -1097,6 +1127,22 @@ function Recorder({
                 : phase === "sending"
                   ? "正在送出…"
                   : "● 開始錄音"}
+            </button>
+          )}
+          {phase === "retry" && (
+            <button
+              className="quiet"
+              onClick={() => {
+                if (confirm("確定捨棄這段尚未送出的錄音？")) {
+                  sessionStorage.removeItem(pendingKey(q.id));
+                  setPending(null);
+                  setPhase("idle");
+                  setError("");
+                  onDiscard();
+                }
+              }}
+            >
+              捨棄錄音，繼續下一題
             </button>
           )}
           <p className="muted">按下後開始倒數，10 秒到自動送出。</p>

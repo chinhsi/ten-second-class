@@ -1,0 +1,10 @@
+{
+  "date": "2026-09-18T01:34:42.952Z",
+  "engine": "WebKit 26.6",
+  "scope": "Decode synthesized AAC/MP4 and convert using production recordingToWav; 10.5 seconds trimmed to 10. No microphone capture tested.",
+  "wav_bytes": 320044,
+  "sample_rate": 16000,
+  "seconds": 10,
+  "rms": 0.08825506532856378,
+  "passed": true
+}
