@@ -41,34 +41,96 @@ const labels: Record<string, string> = {
   unscorable: "Could not assess",
   transcribed: "Transcript only",
 };
+const labelsZh: Record<string, string> = {
+  draft: "備課中",
+  active: "進行中",
+  ended: "已結束",
+  closed: "已收題",
+  recording: "尚未提交",
+  processing: "評分中",
+  done: "已完成",
+  failed: "需要重試",
+  understood: "達標",
+  partial: "部分達標",
+  not_yet: "尚未達標",
+  unscorable: "無法判讀",
+  transcribed: "只顯示逐字稿",
+};
+const statusLabel = (key: string | undefined, lang: "en" | "zh") =>
+  (lang === "zh" ? labelsZh[key || ""] : labels[key || ""]) ||
+  (lang === "zh" ? "未提交" : "Not submitted");
 const languageLabels: Record<string, string> = {
   auto: "Auto-detect (Mandarin / Cantonese / English)",
   mandarin: "Mandarin",
   cantonese: "Cantonese",
   english: "English",
 };
+const languageLabelsZh: Record<string, string> = {
+  auto: "自動辨識（普通話／廣東話／英文）",
+  mandarin: "普通話",
+  cantonese: "廣東話",
+  english: "英文",
+};
+const tx = (lang: "en" | "zh", en: string, zh: string) =>
+  lang === "zh" ? zh : en;
 function App() {
   const [hash, setHash] = useState(location.hash);
+  const [lang, setLang] = useState<"en" | "zh">(
+    () => (localStorage.getItem("ts-language") as "en" | "zh") || "en",
+  );
   useEffect(() => {
     const f = () => setHash(location.hash);
     addEventListener("hashchange", f);
     return () => removeEventListener("hashchange", f);
   }, []);
   const code = new URLSearchParams(hash.slice(1)).get("join");
+  function changeLanguage(next: "en" | "zh") {
+    setLang(next);
+    localStorage.setItem("ts-language", next);
+  }
   return (
     <>
       <header>
-        <a href="#">◉ Ten-Second Class</a>
-        <span>One sentence. See every voice.</span>
+        <a href="#">◉ {tx(lang, "Ten-Second Class", "十秒課堂")}</a>
+        <span>
+          {tx(
+            lang,
+            "One sentence. See every voice.",
+            "一句話，看見每個人的理解。",
+          )}
+        </span>
+        <div
+          className="language-switch"
+          role="group"
+          aria-label="Interface language"
+        >
+          <button
+            className={lang === "en" ? "selected" : ""}
+            onClick={() => changeLanguage("en")}
+          >
+            English
+          </button>
+          <button
+            className={lang === "zh" ? "selected" : ""}
+            onClick={() => changeLanguage("zh")}
+          >
+            中文
+          </button>
+        </div>
       </header>
-      {code ? <Student code={code} /> : <Teacher />}
+      {code ? <Student code={code} lang={lang} /> : <Teacher lang={lang} />}
       <footer>
-        Up to 10 seconds · AI gives a first pass; teachers can review the audio
+        {tx(
+          lang,
+          "Up to 10 seconds · AI gives a first pass; teachers can review the audio",
+          "每次最多 10 秒 · AI 提供初步回饋，老師可聽錄音覆核",
+        )}
       </footer>
     </>
   );
 }
-function Teacher() {
+function Teacher({ lang }: { lang: "en" | "zh" }) {
+  const t = (en: string, zh: string) => tx(lang, en, zh);
   const [owner, setOwner] = useState(sessionStorage.getItem("ts-owner") || "");
   const [logged, setLogged] = useState(false);
   const [classes, setClasses] = useState<any[]>([]);
@@ -143,7 +205,16 @@ function Teacher() {
     : "";
   function download() {
     const rows = [
-      ["Name", "Student ID", "Question", "Mode", "Status", "Score", "Transcript", "Feedback"],
+      [
+        "Name",
+        "Student ID",
+        "Question",
+        "Mode",
+        "Status",
+        "Score",
+        "Transcript",
+        "Feedback",
+      ],
       ...d.questions.flatMap((q: any) =>
         d.members.map((m: any) => {
           const r = d.responses.find(
@@ -154,7 +225,7 @@ function Teacher() {
             m.student_id,
             q.prompt,
             q.mode === "answer" ? "Concept response" : "Pronunciation",
-            labels[r?.status] || "Not answered",
+            statusLabel(r?.status, lang),
             r?.result?.score ?? "",
             r?.result?.transcript || "",
             r?.result?.feedback || "",
@@ -192,13 +263,20 @@ function Teacher() {
       <main className="welcome">
         <div className="eyebrow">10 SECONDS · EVERY VOICE</div>
         <h1>
-          Give everyone
-          <br />a voice.
+          {t("Give everyone", "讓每個人")}
+          <br />
+          {t("a voice.", "都說一句。")}
         </h1>
         <p>
-          Prepare questions before class and enable them when you are ready.
+          {t(
+            "Prepare questions before class and enable them when you are ready.",
+            "課前準備題目，上課一鍵啟用。",
+          )}
           <br />
-          Use a ten-second reading or concept response to see understanding.
+          {t(
+            "Use a ten-second reading or concept response to see understanding.",
+            "朗讀發音或概念短答，十秒就能看見理解。",
+          )}
         </p>
         <form
           className="card login"
@@ -211,9 +289,9 @@ function Teacher() {
             });
           }}
         >
-          <h2>Teacher workspace</h2>
+          <h2>{t("Teacher workspace", "老師工作台")}</h2>
           <label>
-            Owner key
+            {t("Owner key", "管理密碼")}
             <input
               type="password"
               autoComplete="current-password"
@@ -222,8 +300,13 @@ function Teacher() {
               onChange={(e) => setOwner(e.target.value)}
             />
           </label>
-          <button disabled={busy}>Open workspace</button>
-          <small>Your InterAct owner key stays in this browser tab.</small>
+          <button disabled={busy}>{t("Open workspace", "進入備課")}</button>
+          <small>
+            {t(
+              "Your InterAct owner key stays in this browser tab.",
+              "沿用你的 InterAct 管理密碼，僅保留在此分頁。",
+            )}
+          </small>
           {error && (
             <p role="alert" className="error">
               {error}
@@ -231,7 +314,10 @@ function Teacher() {
           )}
         </form>
         <a className="student-link" href="#join=">
-          Students: scan the teacher's QR code to join
+          {t(
+            "Students: scan the teacher's QR code to join",
+            "學生請掃老師的 QR code 加入",
+          )}
         </a>
       </main>
     );
@@ -239,7 +325,7 @@ function Teacher() {
     <main className="workspace">
       <aside>
         <div className="eyebrow">TEACHER WORKSPACE</div>
-        <h2>My classes</h2>
+        <h2>{t("My classes", "我的課堂")}</h2>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -252,14 +338,14 @@ function Teacher() {
           }}
         >
           <input
-            aria-label="New class name"
-            placeholder="New class name"
+            aria-label={t("New class name", "新課堂名稱")}
+            placeholder={t("New class name", "新課堂名稱")}
             value={title}
             maxLength={100}
             required
             onChange={(e) => setTitle(e.target.value)}
           />
-          <button disabled={busy}>＋ Create class</button>
+          <button disabled={busy}>＋ {t("Create class", "建立課堂")}</button>
         </form>
         <nav>
           {classes.map((c) => (
@@ -275,7 +361,7 @@ function Teacher() {
               }
             >
               <strong>{c.title}</strong>
-              <small>{labels[c.status]}</small>
+              <small>{statusLabel(c.status, lang)}</small>
             </button>
           ))}
         </nav>
@@ -287,7 +373,7 @@ function Teacher() {
             setLogged(false);
           }}
         >
-          Sign out
+          {t("Sign out", "登出")}
         </button>
       </aside>
       <section className="content">
@@ -298,18 +384,26 @@ function Teacher() {
         )}
         {!cls ? (
           <div className="empty">
-            <h1>Prepare first, then go live.</h1>
-            <p>Create a class and line up the questions you want to ask.</p>
+            <h1>{t("Prepare first, then go live.", "先準備，再開課。")}</h1>
+            <p>
+              {t(
+                "Create a class and line up the questions you want to ask.",
+                "建立一個課堂，把要問的幾句話排好。",
+              )}
+            </p>
           </div>
         ) : (
           <>
             <div className="class-head">
               <div>
                 <span className={"pill " + cls.status}>
-                  {labels[cls.status]}
+                  {statusLabel(cls.status, lang)}
                 </span>
                 <h1>{cls.title}</h1>
-                <p>10-second recording limit · {d.members.length} joined</p>
+                <p>
+                  {t("10-second recording limit", "錄音上限 10 秒")} ·{" "}
+                  {d.members.length} {t("joined", "人已加入")}
+                </p>
               </div>
               <div className="actions">
                 {cls.status !== "active" ? (
@@ -325,7 +419,7 @@ function Teacher() {
                       })
                     }
                   >
-                    Enable class
+                    {t("Enable class", "啟用課堂")}
                   </button>
                 ) : (
                   <button
@@ -341,11 +435,11 @@ function Teacher() {
                       })
                     }
                   >
-                    End class
+                    {t("End class", "結束課堂")}
                   </button>
                 )}
                 <button className="quiet" onClick={download}>
-                  Download records
+                  {t("Download records", "下載紀錄")}
                 </button>
                 <button
                   className="quiet"
@@ -365,15 +459,17 @@ function Teacher() {
                       });
                   }}
                 >
-                  Delete class
+                  {t("Delete class", "刪除課堂")}
                 </button>
               </div>
             </div>
             <div className="top-grid">
               <section className="card">
                 <div className="section-title">
-                  <h2>Prepare questions</h2>
-                  <span className="muted">{d.questions.length} questions</span>
+                  <h2>{t("Prepare questions", "課前備題")}</h2>
+                  <span className="muted">
+                    {d.questions.length} {t("questions", "題")}
+                  </span>
                 </div>
                 <div className="questions">
                   {d.questions.map((q: any, i: number) => (
@@ -392,9 +488,9 @@ function Teacher() {
                         <span>
                           <small>
                             {q.mode === "answer"
-                              ? "Concept response"
-                              : "Pronunciation"}{" "}
-                            · {labels[q.status]}
+                              ? t("Concept response", "概念作答")
+                              : t("Pronunciation", "朗讀發音")}{" "}
+                            · {statusLabel(q.status, lang)}
                           </small>
                           <strong>{q.prompt}</strong>
                         </span>
@@ -414,7 +510,7 @@ function Teacher() {
                               setFeedbackEnabled(q.feedback_enabled !== false);
                             }}
                           >
-                            Edit
+                            {t("Edit", "編輯")}
                           </button>
                         )}
                         {q.status === "active" ? (
@@ -428,7 +524,7 @@ function Teacher() {
                               })
                             }
                           >
-                            Close
+                            {t("Close", "收題")}
                           </button>
                         ) : (
                           <button
@@ -444,7 +540,7 @@ function Teacher() {
                               })
                             }
                           >
-                            Open
+                            {t("Open", "開放")}
                           </button>
                         )}
                       </div>
@@ -478,32 +574,44 @@ function Teacher() {
                     });
                   }}
                 >
-                  <h3>{editing ? "Edit question" : "＋ Add question"}</h3>
+                  <h3>
+                    {editing
+                      ? t("Edit question", "編輯題目")
+                      : t("＋ Add question", "＋ 新增題目")}
+                  </h3>
                   <div className="segmented">
                     <button
                       type="button"
                       className={mode === "answer" ? "on" : ""}
                       onClick={() => setMode("answer")}
                     >
-                      Concept response
+                      {t("Concept response", "概念作答")}
                     </button>
                     <button
                       type="button"
                       className={mode === "pronunciation" ? "on" : ""}
                       onClick={() => setMode("pronunciation")}
                     >
-                      Pronunciation
+                      {t("Pronunciation", "朗讀發音")}
                     </button>
                   </div>
                   <label>
-                    {mode === "answer" ? "Question" : "Reading passage"}
+                    {mode === "answer"
+                      ? t("Question", "問題")
+                      : t("Reading passage", "指定朗讀內容")}
                     <textarea
                       required
                       maxLength={1000}
                       placeholder={
                         mode === "answer"
-                          ? "e.g. Why should we verify an AI answer?"
-                          : "e.g. Learning without thinking is a waste."
+                          ? t(
+                              "e.g. Why should we verify an AI answer?",
+                              "例如：為什麼 AI 的答案需要查證？",
+                            )
+                          : t(
+                              "e.g. Learning without thinking is a waste.",
+                              "例如：學而不思則罔，思而不學則殆。",
+                            )
                       }
                       value={prompt}
                       onChange={(e) => setPrompt(e.target.value)}
@@ -511,15 +619,15 @@ function Teacher() {
                   </label>
                   <label>
                     {mode === "answer"
-                      ? "Response language"
-                      : "Spoken language"}
+                      ? t("Response language", "回應語言")
+                      : t("Spoken language", "說話語言")}
                     <select
                       value={responseLanguage}
                       onChange={(e) => setResponseLanguage(e.target.value)}
                     >
                       {Object.entries(languageLabels).map(([value, label]) => (
                         <option key={value} value={value}>
-                          {label}
+                          {lang === "zh" ? languageLabelsZh[value] : label}
                         </option>
                       ))}
                     </select>
@@ -532,22 +640,41 @@ function Teacher() {
                         onChange={(e) => setFeedbackEnabled(e.target.checked)}
                       />
                       <span>
-                        <strong>AI feedback and scoring</strong>
-                        <small>Turn off to show the transcript only.</small>
+                        <strong>
+                          {t("AI feedback and scoring", "AI 回饋及評分")}
+                        </strong>
+                        <small>
+                          {t(
+                            "Turn off to show the transcript only.",
+                            "關閉後只顯示逐字稿，不評分。",
+                          )}
+                        </small>
                       </span>
                     </label>
                   )}
                   <label>
                     {mode === "answer"
-                      ? "Answer points (hidden from students)"
-                      : "Language and pronunciation notes (hidden from students)"}
+                      ? t(
+                          "Answer points (hidden from students)",
+                          "答案要點（學生看不到）",
+                        )
+                      : t(
+                          "Language and pronunciation notes (hidden from students)",
+                          "目標語言與發音重點（學生看不到）",
+                        )}
                     <textarea
                       required
                       maxLength={2000}
                       placeholder={
                         mode === "answer"
-                          ? "e.g. AI can produce content that sounds plausible but is wrong."
-                          : "e.g. Mandarin; notice the sounds and pauses."
+                          ? t(
+                              "e.g. AI can produce content that sounds plausible but is wrong.",
+                              "例如：AI 可能產生看似合理但錯誤的內容。",
+                            )
+                          : t(
+                              "e.g. Mandarin; notice the sounds and pauses.",
+                              "例如：普通話，注意發音和停頓。",
+                            )
                       }
                       value={rubric}
                       onChange={(e) => setRubric(e.target.value)}
@@ -555,7 +682,9 @@ function Teacher() {
                   </label>
                   <div className="actions">
                     <button disabled={busy}>
-                      {editing ? "Save changes" : "Add to class"}
+                      {editing
+                        ? t("Save changes", "儲存修改")
+                        : t("Add to class", "存入課堂")}
                     </button>
                     {editing && (
                       <button
@@ -569,7 +698,7 @@ function Teacher() {
                           setFeedbackEnabled(true);
                         }}
                       >
-                        Cancel
+                        {t("Cancel", "取消")}
                       </button>
                     )}
                   </div>
@@ -577,7 +706,7 @@ function Teacher() {
               </section>
               <section className="card qr">
                 <div className="eyebrow">JOIN THE CLASS</div>
-                <h2>Scan to join and speak</h2>
+                <h2>{t("Scan to join and speak", "掃碼，準備說一句")}</h2>
                 <QRCodeSVG value={joinURL} size={180} marginSize={2} />
                 <p className="code">{cls.code}</p>
                 <button
@@ -588,16 +717,18 @@ function Teacher() {
                     })
                   }
                 >
-                  Copy join link
+                  {t("Copy join link", "複製加入連結")}
                 </button>
                 <a href={joinURL} target="_blank" rel="noreferrer">
-                  Open student page ↗
+                  {t("Open student page ↗", "開啟學生頁 ↗")}
                 </a>
                 <p className="muted">
-                  Share this while preparing.
+                  {t("Share this while preparing.", "備課時就能分享。")}
                   <br />
-                  Students can record after you enable the class and open a
-                  question.
+                  {t(
+                    "Students can record after you enable the class and open a question.",
+                    "啟用課堂、開放題目後才能錄音。",
+                  )}
                 </p>
               </section>
             </div>
@@ -605,10 +736,10 @@ function Teacher() {
               <div className="section-title">
                 <div>
                   <div className="eyebrow">LIVE PULSE</div>
-                  <h2>Class responses</h2>
+                  <h2>{t("Class responses", "全班回應")}</h2>
                 </div>
                 <select
-                  aria-label="View question"
+                  aria-label={t("View question", "查看題目")}
                   value={question?.id || ""}
                   onChange={(e) => setSelected(e.target.value)}
                 >
@@ -625,7 +756,7 @@ function Teacher() {
                     {submitted.length}
                     <small>/{d.members.length}</small>
                   </strong>
-                  <span>Submitted</span>
+                  <span>{t("Submitted", "已提交")}</span>
                 </div>
                 <div>
                   <strong>
@@ -636,8 +767,8 @@ function Teacher() {
                   </strong>
                   <span>
                     {question?.mode === "answer"
-                      ? "Understood"
-                      : "Pronunciation met"}
+                      ? t("Understood", "理解到位")
+                      : t("Pronunciation met", "發音達標")}
                   </span>
                 </div>
                 <div>
@@ -648,16 +779,16 @@ function Teacher() {
                       ).length
                     }
                   </strong>
-                  <span>Needs follow-up</span>
+                  <span>{t("Needs follow-up", "需要跟進")}</span>
                 </div>
                 <div>
                   <strong>{d.members.length - submitted.length}</strong>
-                  <span>Not answered</span>
+                  <span>{t("Not answered", "本題未答")}</span>
                 </div>
               </div>
               {done.some((r: any) => r.result?.issue) && (
                 <div className="insights">
-                  <h3>Things to follow up</h3>
+                  <h3>{t("Things to follow up", "需要留意的地方")}</h3>
                   <ul>
                     {[
                       ...new Set(
@@ -698,12 +829,12 @@ function Teacher() {
                     })
                   }
                 >
-                  Retry incomplete assessments
+                  {t("Retry incomplete assessments", "重試全部未完成評分")}
                 </button>
                 {[
-                  ["all", "All"],
-                  ["missing", "Not answered"],
-                  ["never", "Never submitted"],
+                  ["all", t("All", "全部")],
+                  ["missing", t("Not answered", "本題未答")],
+                  ["never", t("Never submitted", "本堂尚未提交")],
                 ].map(([k, t]) => (
                   <button
                     key={k}
@@ -715,7 +846,10 @@ function Teacher() {
                 ))}
               </div>
               <p className="muted">
-                The list contains students who joined by QR code.
+                {t(
+                  "The list contains students who joined by QR code.",
+                  "名單以已掃碼加入的學生為準。",
+                )}
               </p>
               {audio && (
                 <audio
@@ -723,7 +857,9 @@ function Teacher() {
                   autoPlay
                   src={audio}
                   onError={() =>
-                    setError("The playback link expired. Click Play again to request a new link.")
+                    setError(
+                      "The playback link expired. Click Play again to request a new link.",
+                    )
                   }
                 />
               )}
@@ -731,11 +867,11 @@ function Teacher() {
                 <table>
                   <thead>
                     <tr>
-                      <th>Student</th>
-                      <th>Status</th>
-                      <th>Score</th>
-                      <th>Feedback and transcript</th>
-                      <th>Audio</th>
+                      <th>{t("Student", "學生")}</th>
+                      <th>{t("Status", "狀態")}</th>
+                      <th>{t("Score", "分數")}</th>
+                      <th>{t("Feedback and transcript", "回饋與原話")}</th>
+                      <th>{t("Audio", "錄音")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -769,8 +905,8 @@ function Teacher() {
                                 }
                               >
                                 {r?.result?.level
-                                  ? labels[r.result.level]
-                                  : labels[r?.status] || "Not submitted"}
+                                  ? statusLabel(r.result.level, lang)
+                                  : statusLabel(r?.status, lang)}
                               </span>
                             </td>
                             <td>
@@ -798,7 +934,7 @@ function Teacher() {
                                     })
                                   }
                                 >
-                                  Play
+                                  {t("Play", "播放")}
                                 </button>
                               )}
                               {(r?.status === "failed" ||
@@ -815,7 +951,7 @@ function Teacher() {
                                     })
                                   }
                                 >
-                                  Retry assessment
+                                  {t("Retry assessment", "重試評分")}
                                 </button>
                               )}
                             </td>
@@ -837,7 +973,8 @@ function Teacher() {
     </main>
   );
 }
-function Student({ code }: { code: string }) {
+function Student({ code, lang }: { code: string; lang: "en" | "zh" }) {
+  const t = (en: string, zh: string) => tx(lang, en, zh);
   const [token] = useState(() => {
     const k = "ts-token-" + code;
     let t = localStorage.getItem(k);
@@ -923,9 +1060,9 @@ function Student({ code }: { code: string }) {
             }
           }}
         >
-          <h2>Get ready to speak</h2>
+          <h2>{t("Get ready to speak", "準備說一句")}</h2>
           <label>
-            Name
+            {t("Name", "姓名")}
             <input
               required
               maxLength={60}
@@ -935,7 +1072,7 @@ function Student({ code }: { code: string }) {
             />
           </label>
           <label>
-            Student ID
+            {t("Student ID", "學號")}
             <input
               required
               maxLength={60}
@@ -944,22 +1081,29 @@ function Student({ code }: { code: string }) {
             />
           </label>
           <p className="muted">
-            Your recording is assessed by AI. Your teacher can review it; other
-            students cannot see it.
+            {t(
+              "Your recording is assessed by AI. Your teacher can review it; other students cannot see it.",
+              "錄音將交給 AI 評測，老師可查看和播放；其他同學看不到你的答案。",
+            )}
           </p>
           <button disabled={busy || !info || info.status === "ended"}>
-            Join class
+            {t("Join class", "加入課堂")}
           </button>
         </form>
       ) : (
         <>
           <p className="muted">
-            {state?.member.name}, you have up to 10 seconds to speak.
+            {state?.member.name}
+            {t(
+              ", you have up to 10 seconds to speak.",
+              "，每次最多 10 秒，說出你的想法。",
+            )}
           </p>
           {q ? (
             <Recorder
               key={q.id}
               q={q}
+              lang={lang}
               call={call}
               response={state?.responses.find(
                 (r: any) => r.question_id === q.id,
@@ -976,16 +1120,22 @@ function Student({ code }: { code: string }) {
               <div className="orb">◉</div>
               <h2>
                 {state?.class.status === "ended"
-                  ? "This class has ended"
-                  : "Ready. Waiting for the teacher to open a question"}
+                  ? t("This class has ended", "這堂課已結束")
+                  : t(
+                      "Ready. Waiting for the teacher to open a question",
+                      "已就位，等老師開題",
+                    )}
               </h2>
               <p>
-                Keep this page open. The question will appear automatically.
+                {t(
+                  "Keep this page open. The question will appear automatically.",
+                  "保持這個畫面，題目會自動出現。",
+                )}
               </p>
             </div>
           )}
           <section className="history">
-            <h2>My responses</h2>
+            <h2>{t("My responses", "我的回應")}</h2>
             {state?.responses
               .filter((r: any) => r.status !== "recording")
               .map((r: any) => (
@@ -997,7 +1147,7 @@ function Student({ code }: { code: string }) {
                     }
                   </small>
                   <div className="section-title">
-                    <h3>{labels[r.result?.level] || labels[r.status]}</h3>
+                    <h3>{statusLabel(r.result?.level || r.status, lang)}</h3>
                     {r.result?.score != null && (
                       <strong className="score">
                         {r.result.score}
@@ -1011,8 +1161,11 @@ function Student({ code }: { code: string }) {
                   <p>
                     {r.result?.feedback ||
                       (r.result?.transcript
-                        ? "Transcript received."
-                        : "Recording received; assessment in progress.")}
+                        ? t("Transcript received.", "已收到逐字稿。")
+                        : t(
+                            "Recording received; assessment in progress.",
+                            "已收到錄音，正在評分。",
+                          ))}
                   </p>
                 </article>
               ))}
@@ -1024,6 +1177,7 @@ function Student({ code }: { code: string }) {
 }
 function Recorder({
   q,
+  lang,
   call,
   response,
   onSubmitted,
@@ -1031,12 +1185,14 @@ function Recorder({
   onDiscard,
 }: {
   q: any;
+  lang: "en" | "zh";
   call: (a: string, b?: any) => Promise<any>;
   response: any;
   onSubmitted: () => Promise<void>;
   onRecording: () => void;
   onDiscard: () => void;
 }) {
+  const t = (en: string, zh: string) => tx(lang, en, zh);
   const [phase, setPhase] = useState(() =>
     savedRecording(q.id) ? "retry" : "idle",
   );
@@ -1162,34 +1318,41 @@ function Recorder({
   return (
     <section className="card record-card">
       <span className="pill">
-        {q.mode === "answer" ? "Concept response" : "Pronunciation"} · up to 10
-        seconds
+        {q.mode === "answer"
+          ? t("Concept response", "概念作答")
+          : t("Pronunciation", "朗讀發音")}{" "}
+        · {t("up to 10 seconds", "最多 10 秒")}
       </span>
       <h2>{q.prompt}</h2>
       {submitted ? (
         <div className="received">
-          ✓ Recording received
-          <p>Your result will appear below automatically.</p>
+          ✓ {t("Recording received", "已收到你的錄音")}
+          <p>
+            {t(
+              "Your result will appear below automatically.",
+              "回饋會自動出現在下方。",
+            )}
+          </p>
         </div>
       ) : (
         <>
           <div className={"countdown " + (phase === "recording" ? "live" : "")}>
             <strong>{Math.ceil(left)}</strong>
-            <span>sec</span>
+            <span>{t("sec", "秒")}</span>
           </div>
           {phase === "recording" ? (
             <button
               className="record-button stop"
               onClick={() => recorder.current?.stop()}
             >
-              ■ Submit early
+              ■ {t("Submit early", "提早送出")}
             </button>
           ) : phase === "retry" ? (
             <button
               className="record-button"
               onClick={() => pending && upload(pending)}
             >
-              Upload this recording again
+              {t("Upload this recording again", "重新上傳這段錄音")}
             </button>
           ) : (
             <button
@@ -1198,10 +1361,10 @@ function Recorder({
               onClick={start}
             >
               {phase === "permission"
-                ? "Opening microphone…"
+                ? t("Opening microphone…", "正在開啟麥克風…")
                 : phase === "sending"
-                  ? "Uploading…"
-                  : "● Start recording"}
+                  ? t("Uploading…", "正在送出…")
+                  : t("● Start recording", "● 開始錄音")}
             </button>
           )}
           {phase === "retry" && (
@@ -1217,12 +1380,14 @@ function Recorder({
                 }
               }}
             >
-              Discard and continue
+              {t("Discard and continue", "捨棄錄音，繼續下一題")}
             </button>
           )}
           <p className="muted">
-            The countdown starts when you press the button. It submits
-            automatically at 10 seconds.
+            {t(
+              "The countdown starts when you press the button. It submits automatically at 10 seconds.",
+              "按下後開始倒數，10 秒到自動送出。",
+            )}
           </p>
         </>
       )}

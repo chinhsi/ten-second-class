@@ -67,6 +67,27 @@ header span {
   font-size: 13px;
   color: #6f7c72;
 }
+.language-switch {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid #d5dbd1;
+  border-radius: 999px;
+  background: #fff;
+}
+.language-switch button {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: transparent;
+  color: #24594e;
+  font-size: 12px;
+}
+.language-switch button:hover:not(:disabled),
+.language-switch button.selected {
+  background: #24594e;
+  color: #fff;
+  transform: none;
+}
 footer {
   text-align: center;
   font-size: 12px;
