@@ -13,7 +13,9 @@ async function api(action: string, data: any = {}) {
   });
   const j = await r.json();
   if (!r.ok || j.error)
-    throw Object.assign(Error(j.error || "連線失敗"), { code: j.code });
+    throw Object.assign(Error(j.error || "Connection failed"), {
+      code: j.code,
+    });
   return j;
 }
 const pendingKey = (id: string) => "ts-recording-" + id;
@@ -25,18 +27,25 @@ function savedRecording(id: string): string | null {
   }
 }
 const labels: Record<string, string> = {
-  draft: "備課中",
-  active: "進行中",
-  ended: "已結束",
-  closed: "已收題",
-  recording: "尚未提交",
-  processing: "評分中",
-  done: "已完成",
-  failed: "評分需重試",
-  understood: "達標",
-  partial: "部分達標",
-  not_yet: "尚未達標",
-  unscorable: "無法判讀",
+  draft: "Preparing",
+  active: "Live",
+  ended: "Ended",
+  closed: "Closed",
+  recording: "Not submitted",
+  processing: "Assessing",
+  done: "Complete",
+  failed: "Retry needed",
+  understood: "Understood",
+  partial: "Partly understood",
+  not_yet: "Not yet understood",
+  unscorable: "Could not assess",
+  transcribed: "Transcript only",
+};
+const languageLabels: Record<string, string> = {
+  auto: "Auto-detect (Mandarin / Cantonese / English)",
+  mandarin: "Mandarin",
+  cantonese: "Cantonese",
+  english: "English",
 };
 function App() {
   const [hash, setHash] = useState(location.hash);
@@ -49,11 +58,13 @@ function App() {
   return (
     <>
       <header>
-        <a href="#">◉ 十秒課堂</a>
-        <span>一句話，看見每個人的理解。</span>
+        <a href="#">◉ Ten-Second Class</a>
+        <span>One sentence. See every voice.</span>
       </header>
       {code ? <Student code={code} /> : <Teacher />}
-      <footer>每次最多 10 秒 · AI 提供初步回饋，老師可聽錄音覆核</footer>
+      <footer>
+        Up to 10 seconds · AI gives a first pass; teachers can review the audio
+      </footer>
     </>
   );
 }
@@ -73,6 +84,8 @@ function Teacher() {
   const [prompt, setPrompt] = useState("");
   const [rubric, setRubric] = useState("");
   const [mode, setMode] = useState("answer");
+  const [responseLanguage, setResponseLanguage] = useState("auto");
+  const [feedbackEnabled, setFeedbackEnabled] = useState(true);
   const [editing, setEditing] = useState<string | null>(null);
   const [selected, setSelected] = useState("");
   const [audio, setAudio] = useState("");
@@ -130,7 +143,7 @@ function Teacher() {
     : "";
   function download() {
     const rows = [
-      ["姓名", "學號", "題目", "模式", "狀態", "分數", "逐字稿", "回饋"],
+      ["Name", "Student ID", "Question", "Mode", "Status", "Score", "Transcript", "Feedback"],
       ...d.questions.flatMap((q: any) =>
         d.members.map((m: any) => {
           const r = d.responses.find(
@@ -140,8 +153,8 @@ function Teacher() {
             m.name,
             m.student_id,
             q.prompt,
-            q.mode === "answer" ? "作答" : "發音",
-            labels[r?.status] || "未答",
+            q.mode === "answer" ? "Concept response" : "Pronunciation",
+            labels[r?.status] || "Not answered",
             r?.result?.score ?? "",
             r?.result?.transcript || "",
             r?.result?.feedback || "",
@@ -170,7 +183,7 @@ function Teacher() {
     );
     const a = document.createElement("a");
     a.href = u;
-    a.download = `${cls.title.replace(/[\/:*?"<>|]/g, "_")}-作答紀錄.csv`;
+    a.download = `${cls.title.replace(/[\/:*?"<>|]/g, "_")}-responses.csv`;
     a.click();
     URL.revokeObjectURL(u);
   }
@@ -179,14 +192,13 @@ function Teacher() {
       <main className="welcome">
         <div className="eyebrow">10 SECONDS · EVERY VOICE</div>
         <h1>
-          讓每個人
-          <br />
-          都說一句。
+          Give everyone
+          <br />a voice.
         </h1>
         <p>
-          課前準備題目，上課一鍵啟用。
+          Prepare questions before class and enable them when you are ready.
           <br />
-          朗讀發音或概念短答，十秒就能開始看見理解。
+          Use a ten-second reading or concept response to see understanding.
         </p>
         <form
           className="card login"
@@ -199,9 +211,9 @@ function Teacher() {
             });
           }}
         >
-          <h2>老師工作台</h2>
+          <h2>Teacher workspace</h2>
           <label>
-            管理密碼
+            Owner key
             <input
               type="password"
               autoComplete="current-password"
@@ -210,8 +222,8 @@ function Teacher() {
               onChange={(e) => setOwner(e.target.value)}
             />
           </label>
-          <button disabled={busy}>進入備課</button>
-          <small>沿用你的 InterAct 管理密碼，僅保留在此分頁。</small>
+          <button disabled={busy}>Open workspace</button>
+          <small>Your InterAct owner key stays in this browser tab.</small>
           {error && (
             <p role="alert" className="error">
               {error}
@@ -219,7 +231,7 @@ function Teacher() {
           )}
         </form>
         <a className="student-link" href="#join=">
-          學生請掃老師的 QR code 加入
+          Students: scan the teacher's QR code to join
         </a>
       </main>
     );
@@ -227,7 +239,7 @@ function Teacher() {
     <main className="workspace">
       <aside>
         <div className="eyebrow">TEACHER WORKSPACE</div>
-        <h2>我的課堂</h2>
+        <h2>My classes</h2>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -240,14 +252,14 @@ function Teacher() {
           }}
         >
           <input
-            aria-label="新課堂名稱"
-            placeholder="新課堂名稱"
+            aria-label="New class name"
+            placeholder="New class name"
             value={title}
             maxLength={100}
             required
             onChange={(e) => setTitle(e.target.value)}
           />
-          <button disabled={busy}>＋ 建立課堂</button>
+          <button disabled={busy}>＋ Create class</button>
         </form>
         <nav>
           {classes.map((c) => (
@@ -275,7 +287,7 @@ function Teacher() {
             setLogged(false);
           }}
         >
-          登出
+          Sign out
         </button>
       </aside>
       <section className="content">
@@ -286,8 +298,8 @@ function Teacher() {
         )}
         {!cls ? (
           <div className="empty">
-            <h1>先準備，再開課。</h1>
-            <p>建立一個課堂，把要問的幾句話排好。</p>
+            <h1>Prepare first, then go live.</h1>
+            <p>Create a class and line up the questions you want to ask.</p>
           </div>
         ) : (
           <>
@@ -297,7 +309,7 @@ function Teacher() {
                   {labels[cls.status]}
                 </span>
                 <h1>{cls.title}</h1>
-                <p>錄音上限 10 秒 · {d.members.length} 人已加入</p>
+                <p>10-second recording limit · {d.members.length} joined</p>
               </div>
               <div className="actions">
                 {cls.status !== "active" ? (
@@ -313,7 +325,7 @@ function Teacher() {
                       })
                     }
                   >
-                    啟用課堂 · Enable class
+                    Enable class
                   </button>
                 ) : (
                   <button
@@ -329,11 +341,11 @@ function Teacher() {
                       })
                     }
                   >
-                    結束課堂
+                    End class
                   </button>
                 )}
                 <button className="quiet" onClick={download}>
-                  下載紀錄
+                  Download records
                 </button>
                 <button
                   className="quiet"
@@ -341,7 +353,7 @@ function Teacher() {
                   onClick={() => {
                     if (
                       confirm(
-                        "確定刪除整個課堂、學生紀錄及錄音？此操作無法復原。",
+                        "Delete this class, student records, and recordings? This cannot be undone.",
                       )
                     )
                       run(async () => {
@@ -353,15 +365,15 @@ function Teacher() {
                       });
                   }}
                 >
-                  刪除課堂
+                  Delete class
                 </button>
               </div>
             </div>
             <div className="top-grid">
               <section className="card">
                 <div className="section-title">
-                  <h2>課前備題</h2>
-                  <span className="muted">{d.questions.length} 題</span>
+                  <h2>Prepare questions</h2>
+                  <span className="muted">{d.questions.length} questions</span>
                 </div>
                 <div className="questions">
                   {d.questions.map((q: any, i: number) => (
@@ -379,8 +391,10 @@ function Teacher() {
                         <span className="number">{i + 1}</span>
                         <span>
                           <small>
-                            {q.mode === "answer" ? "概念作答" : "朗讀發音"} ·{" "}
-                            {labels[q.status]}
+                            {q.mode === "answer"
+                              ? "Concept response"
+                              : "Pronunciation"}{" "}
+                            · {labels[q.status]}
                           </small>
                           <strong>{q.prompt}</strong>
                         </span>
@@ -394,9 +408,13 @@ function Teacher() {
                               setMode(q.mode);
                               setPrompt(q.prompt);
                               setRubric(q.rubric);
+                              setResponseLanguage(
+                                q.response_language || "auto",
+                              );
+                              setFeedbackEnabled(q.feedback_enabled !== false);
                             }}
                           >
-                            編輯
+                            Edit
                           </button>
                         )}
                         {q.status === "active" ? (
@@ -410,7 +428,7 @@ function Teacher() {
                               })
                             }
                           >
-                            收題
+                            Close
                           </button>
                         ) : (
                           <button
@@ -426,7 +444,7 @@ function Teacher() {
                               })
                             }
                           >
-                            開放
+                            Open
                           </button>
                         )}
                       </div>
@@ -444,6 +462,8 @@ function Teacher() {
                         mode,
                         prompt,
                         rubric,
+                        responseLanguage,
+                        feedbackEnabled,
                         position: editing
                           ? d.questions.find((q: any) => q.id === editing)
                               ?.position
@@ -452,36 +472,38 @@ function Teacher() {
                       setPrompt("");
                       setRubric("");
                       setEditing(null);
+                      setResponseLanguage("auto");
+                      setFeedbackEnabled(true);
                       await refresh();
                     });
                   }}
                 >
-                  <h3>{editing ? "編輯題目" : "＋ 新增題目"}</h3>
+                  <h3>{editing ? "Edit question" : "＋ Add question"}</h3>
                   <div className="segmented">
                     <button
                       type="button"
                       className={mode === "answer" ? "on" : ""}
                       onClick={() => setMode("answer")}
                     >
-                      概念作答
+                      Concept response
                     </button>
                     <button
                       type="button"
                       className={mode === "pronunciation" ? "on" : ""}
                       onClick={() => setMode("pronunciation")}
                     >
-                      朗讀發音
+                      Pronunciation
                     </button>
                   </div>
                   <label>
-                    {mode === "answer" ? "問題" : "指定朗讀內容"}
+                    {mode === "answer" ? "Question" : "Reading passage"}
                     <textarea
                       required
                       maxLength={1000}
                       placeholder={
                         mode === "answer"
-                          ? "例如：為什麼 AI 的答案需要查證？"
-                          : "例如：學而不思則罔，思而不學則殆。"
+                          ? "e.g. Why should we verify an AI answer?"
+                          : "e.g. Learning without thinking is a waste."
                       }
                       value={prompt}
                       onChange={(e) => setPrompt(e.target.value)}
@@ -489,15 +511,43 @@ function Teacher() {
                   </label>
                   <label>
                     {mode === "answer"
-                      ? "答案要點（學生看不到）"
-                      : "目標語言與發音重點（學生看不到）"}
+                      ? "Response language"
+                      : "Spoken language"}
+                    <select
+                      value={responseLanguage}
+                      onChange={(e) => setResponseLanguage(e.target.value)}
+                    >
+                      {Object.entries(languageLabels).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {mode === "answer" && (
+                    <label className="check-row">
+                      <input
+                        type="checkbox"
+                        checked={feedbackEnabled}
+                        onChange={(e) => setFeedbackEnabled(e.target.checked)}
+                      />
+                      <span>
+                        <strong>AI feedback and scoring</strong>
+                        <small>Turn off to show the transcript only.</small>
+                      </span>
+                    </label>
+                  )}
+                  <label>
+                    {mode === "answer"
+                      ? "Answer points (hidden from students)"
+                      : "Language and pronunciation notes (hidden from students)"}
                     <textarea
                       required
                       maxLength={2000}
                       placeholder={
                         mode === "answer"
-                          ? "例如：AI 可能產生看似合理但錯誤的內容。"
-                          : "例如：普通話，注意「學」「思」和停頓。"
+                          ? "e.g. AI can produce content that sounds plausible but is wrong."
+                          : "e.g. Mandarin; notice the sounds and pauses."
                       }
                       value={rubric}
                       onChange={(e) => setRubric(e.target.value)}
@@ -505,7 +555,7 @@ function Teacher() {
                   </label>
                   <div className="actions">
                     <button disabled={busy}>
-                      {editing ? "儲存修改" : "存入課堂"}
+                      {editing ? "Save changes" : "Add to class"}
                     </button>
                     {editing && (
                       <button
@@ -515,9 +565,11 @@ function Teacher() {
                           setEditing(null);
                           setPrompt("");
                           setRubric("");
+                          setResponseLanguage("auto");
+                          setFeedbackEnabled(true);
                         }}
                       >
-                        取消
+                        Cancel
                       </button>
                     )}
                   </div>
@@ -525,7 +577,7 @@ function Teacher() {
               </section>
               <section className="card qr">
                 <div className="eyebrow">JOIN THE CLASS</div>
-                <h2>掃碼，準備說一句</h2>
+                <h2>Scan to join and speak</h2>
                 <QRCodeSVG value={joinURL} size={180} marginSize={2} />
                 <p className="code">{cls.code}</p>
                 <button
@@ -536,15 +588,16 @@ function Teacher() {
                     })
                   }
                 >
-                  複製加入連結
+                  Copy join link
                 </button>
                 <a href={joinURL} target="_blank" rel="noreferrer">
-                  開啟學生頁 ↗
+                  Open student page ↗
                 </a>
                 <p className="muted">
-                  備課時就能分享。
+                  Share this while preparing.
                   <br />
-                  啟用課堂、開放題目後才能錄音。
+                  Students can record after you enable the class and open a
+                  question.
                 </p>
               </section>
             </div>
@@ -552,10 +605,10 @@ function Teacher() {
               <div className="section-title">
                 <div>
                   <div className="eyebrow">LIVE PULSE</div>
-                  <h2>全班回應</h2>
+                  <h2>Class responses</h2>
                 </div>
                 <select
-                  aria-label="查看題目"
+                  aria-label="View question"
                   value={question?.id || ""}
                   onChange={(e) => setSelected(e.target.value)}
                 >
@@ -572,7 +625,7 @@ function Teacher() {
                     {submitted.length}
                     <small>/{d.members.length}</small>
                   </strong>
-                  <span>已提交</span>
+                  <span>Submitted</span>
                 </div>
                 <div>
                   <strong>
@@ -582,7 +635,9 @@ function Teacher() {
                     }
                   </strong>
                   <span>
-                    {question?.mode === "answer" ? "理解到位" : "發音達標"}
+                    {question?.mode === "answer"
+                      ? "Understood"
+                      : "Pronunciation met"}
                   </span>
                 </div>
                 <div>
@@ -593,16 +648,16 @@ function Teacher() {
                       ).length
                     }
                   </strong>
-                  <span>需要跟進</span>
+                  <span>Needs follow-up</span>
                 </div>
                 <div>
                   <strong>{d.members.length - submitted.length}</strong>
-                  <span>本題未答</span>
+                  <span>Not answered</span>
                 </div>
               </div>
               {done.some((r: any) => r.result?.issue) && (
                 <div className="insights">
-                  <h3>需要留意的地方</h3>
+                  <h3>Things to follow up</h3>
                   <ul>
                     {[
                       ...new Set(
@@ -643,12 +698,12 @@ function Teacher() {
                     })
                   }
                 >
-                  重試全部未完成評分
+                  Retry incomplete assessments
                 </button>
                 {[
-                  ["all", "全部"],
-                  ["missing", "本題未答"],
-                  ["never", "本堂尚未提交"],
+                  ["all", "All"],
+                  ["missing", "Not answered"],
+                  ["never", "Never submitted"],
                 ].map(([k, t]) => (
                   <button
                     key={k}
@@ -659,14 +714,16 @@ function Teacher() {
                   </button>
                 ))}
               </div>
-              <p className="muted">名單以已掃碼加入的學生為準。</p>
+              <p className="muted">
+                The list contains students who joined by QR code.
+              </p>
               {audio && (
                 <audio
                   controls
                   autoPlay
                   src={audio}
                   onError={() =>
-                    setError("播放連結已失效，請再按一次該學生的播放按鈕。")
+                    setError("The playback link expired. Click Play again to request a new link.")
                   }
                 />
               )}
@@ -674,11 +731,11 @@ function Teacher() {
                 <table>
                   <thead>
                     <tr>
-                      <th>學生</th>
-                      <th>狀態</th>
-                      <th>分數</th>
-                      <th>回饋與原話</th>
-                      <th>錄音</th>
+                      <th>Student</th>
+                      <th>Status</th>
+                      <th>Score</th>
+                      <th>Feedback and transcript</th>
+                      <th>Audio</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -713,7 +770,7 @@ function Teacher() {
                               >
                                 {r?.result?.level
                                   ? labels[r.result.level]
-                                  : labels[r?.status] || "尚未提交"}
+                                  : labels[r?.status] || "Not submitted"}
                               </span>
                             </td>
                             <td>
@@ -741,7 +798,7 @@ function Teacher() {
                                     })
                                   }
                                 >
-                                  播放
+                                  Play
                                 </button>
                               )}
                               {(r?.status === "failed" ||
@@ -758,7 +815,7 @@ function Teacher() {
                                     })
                                   }
                                 >
-                                  重試評分
+                                  Retry assessment
                                 </button>
                               )}
                             </td>
@@ -769,7 +826,9 @@ function Teacher() {
                 </table>
               </div>
               {!d.members.length && (
-                <p className="empty">學生加入後，就會出現在這裡。</p>
+                <p className="empty">
+                  Students will appear here after joining.
+                </p>
               )}
             </section>
           </>
@@ -840,7 +899,7 @@ function Student({ code }: { code: string }) {
   return (
     <main className="student">
       <div className="eyebrow">YOUR VOICE MATTERS</div>
-      <h1>{state?.class.title || info?.title || "加入課堂"}</h1>
+      <h1>{state?.class.title || info?.title || "Join class"}</h1>
       {error && (
         <p role="alert" className="error">
           {error}
@@ -864,9 +923,9 @@ function Student({ code }: { code: string }) {
             }
           }}
         >
-          <h2>準備說一句</h2>
+          <h2>Get ready to speak</h2>
           <label>
-            姓名
+            Name
             <input
               required
               maxLength={60}
@@ -876,7 +935,7 @@ function Student({ code }: { code: string }) {
             />
           </label>
           <label>
-            學號
+            Student ID
             <input
               required
               maxLength={60}
@@ -885,16 +944,17 @@ function Student({ code }: { code: string }) {
             />
           </label>
           <p className="muted">
-            錄音將交給 AI 評測，老師可查看和播放；其他同學看不到你的答案。
+            Your recording is assessed by AI. Your teacher can review it; other
+            students cannot see it.
           </p>
           <button disabled={busy || !info || info.status === "ended"}>
-            加入課堂
+            Join class
           </button>
         </form>
       ) : (
         <>
           <p className="muted">
-            {state?.member.name}，每次最多 10 秒，說出你的想法。
+            {state?.member.name}, you have up to 10 seconds to speak.
           </p>
           {q ? (
             <Recorder
@@ -916,14 +976,16 @@ function Student({ code }: { code: string }) {
               <div className="orb">◉</div>
               <h2>
                 {state?.class.status === "ended"
-                  ? "這堂課已結束"
-                  : "已就位，等老師開題"}
+                  ? "This class has ended"
+                  : "Ready. Waiting for the teacher to open a question"}
               </h2>
-              <p>保持這個畫面，題目會自動出現。</p>
+              <p>
+                Keep this page open. The question will appear automatically.
+              </p>
             </div>
           )}
           <section className="history">
-            <h2>我的回饋</h2>
+            <h2>My responses</h2>
             {state?.responses
               .filter((r: any) => r.status !== "recording")
               .map((r: any) => (
@@ -946,7 +1008,12 @@ function Student({ code }: { code: string }) {
                   {r.result?.transcript && (
                     <blockquote>「{r.result.transcript}」</blockquote>
                   )}
-                  <p>{r.result?.feedback || "錄音已收到，正在評分。"}</p>
+                  <p>
+                    {r.result?.feedback ||
+                      (r.result?.transcript
+                        ? "Transcript received."
+                        : "Recording received; assessment in progress.")}
+                  </p>
                 </article>
               ))}
           </section>
@@ -1011,7 +1078,9 @@ function Recorder({
     setPhase("permission");
     try {
       if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder)
-        throw Error("此瀏覽器不支援錄音，請用 Safari 或 Chrome 開啟。");
+        throw Error(
+          "This browser does not support recording. Please use Safari or Chrome.",
+        );
       stream.current = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true },
         video: false,
@@ -1026,7 +1095,9 @@ function Recorder({
         return;
       }
       if (Date.now() - Date.parse(ticket.started_at) > 110000)
-        throw Error("本題錄音已逾時，請告知老師");
+        throw Error(
+          "This recording ticket has expired. Please tell your teacher.",
+        );
       const chunks: Blob[] = [];
       const type = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm"].find(
         (t) => MediaRecorder.isTypeSupported(t),
@@ -1040,7 +1111,7 @@ function Recorder({
         if (e.data.size) chunks.push(e.data);
       };
       rec.onerror = () => {
-        setError("錄音失敗，請檢查麥克風。");
+        setError("Recording failed. Please check your microphone.");
         setPhase("idle");
         stream.current?.getTracks().forEach((t) => t.stop());
         if (timer.current) clearInterval(timer.current);
@@ -1052,7 +1123,7 @@ function Recorder({
           const wav = await recordingToWav(
             new Blob(chunks, { type: rec.mimeType }),
           );
-          if (wav.size < 8044) throw Error("請至少說一句再送出");
+          if (wav.size < 8044) throw Error("Please say at least one sentence.");
           const bytes = new Uint8Array(await wav.arrayBuffer());
           let bin = "";
           for (const b of bytes) bin += String.fromCharCode(b);
@@ -1061,7 +1132,9 @@ function Recorder({
           try {
             sessionStorage.setItem(pendingKey(q.id), audio);
           } catch {
-            setError("瀏覽器暫存空間不足，請保持此頁直到上傳完成。");
+            setError(
+              "Browser storage is full. Keep this page open until upload finishes.",
+            );
           }
           await upload(audio);
         } catch (e) {
@@ -1089,32 +1162,34 @@ function Recorder({
   return (
     <section className="card record-card">
       <span className="pill">
-        {q.mode === "answer" ? "概念作答" : "朗讀發音"} · 最多 10 秒
+        {q.mode === "answer" ? "Concept response" : "Pronunciation"} · up to 10
+        seconds
       </span>
       <h2>{q.prompt}</h2>
       {submitted ? (
         <div className="received">
-          ✓ 已收到你的錄音<p>回饋會自動出現在下方。</p>
+          ✓ Recording received
+          <p>Your result will appear below automatically.</p>
         </div>
       ) : (
         <>
           <div className={"countdown " + (phase === "recording" ? "live" : "")}>
             <strong>{Math.ceil(left)}</strong>
-            <span>秒</span>
+            <span>sec</span>
           </div>
           {phase === "recording" ? (
             <button
               className="record-button stop"
               onClick={() => recorder.current?.stop()}
             >
-              ■ 提早送出
+              ■ Submit early
             </button>
           ) : phase === "retry" ? (
             <button
               className="record-button"
               onClick={() => pending && upload(pending)}
             >
-              重新上傳這段錄音
+              Upload this recording again
             </button>
           ) : (
             <button
@@ -1123,17 +1198,17 @@ function Recorder({
               onClick={start}
             >
               {phase === "permission"
-                ? "正在開啟麥克風…"
+                ? "Opening microphone…"
                 : phase === "sending"
-                  ? "正在送出…"
-                  : "● 開始錄音"}
+                  ? "Uploading…"
+                  : "● Start recording"}
             </button>
           )}
           {phase === "retry" && (
             <button
               className="quiet"
               onClick={() => {
-                if (confirm("確定捨棄這段尚未送出的錄音？")) {
+                if (confirm("Discard this recording and continue?")) {
                   sessionStorage.removeItem(pendingKey(q.id));
                   setPending(null);
                   setPhase("idle");
@@ -1142,10 +1217,13 @@ function Recorder({
                 }
               }}
             >
-              捨棄錄音，繼續下一題
+              Discard and continue
             </button>
           )}
-          <p className="muted">按下後開始倒數，10 秒到自動送出。</p>
+          <p className="muted">
+            The countdown starts when you press the button. It submits
+            automatically at 10 seconds.
+          </p>
         </>
       )}
       {error && (

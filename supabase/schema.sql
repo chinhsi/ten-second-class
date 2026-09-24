@@ -5,6 +5,8 @@ create table if not exists public.ts_classes (
 create table if not exists public.ts_questions (
  id uuid primary key default gen_random_uuid(), class_id uuid not null references public.ts_classes on delete cascade,
  mode text not null check(mode in ('pronunciation','answer')), prompt text not null, rubric text not null default '',
+ response_language text not null default 'auto' check(response_language in ('auto','mandarin','cantonese','english')),
+ feedback_enabled boolean not null default true,
  status text not null default 'draft' check(status in ('draft','active','closed')), position integer not null default 0);
 create unique index if not exists ts_one_active on public.ts_questions(class_id) where status='active';
 create table if not exists public.ts_members (
@@ -34,6 +36,8 @@ end $$;
 revoke all on function public.ts_open_question(uuid,uuid) from public,anon,authenticated;
 grant execute on function public.ts_open_question(uuid,uuid) to service_role;
 alter table public.ts_responses add column if not exists debug_error text;
+alter table public.ts_questions add column if not exists response_language text not null default 'auto';
+alter table public.ts_questions add column if not exists feedback_enabled boolean not null default true;
 create or replace function public.ts_limit_class_rows() returns trigger language plpgsql set search_path='' as $$
 begin
  perform 1 from public.ts_classes where id=new.class_id for update;
