@@ -1,4 +1,7 @@
 import { test, expect } from "@playwright/test";
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("ts-language", "zh"));
+});
 const endpoint = "**/functions/v1/ten-second";
 test("teacher can prepare class, save both modes and enable it", async ({
   page,
@@ -38,7 +41,7 @@ test("teacher can prepare class, save both modes and enable it", async ({
   await expect(
     page.getByRole("button", { name: "開放", exact: true }),
   ).toHaveCount(2);
-  await page.getByRole("button", { name: "啟用課堂 · Enable class" }).click();
+  await page.getByRole("button", { name: "啟用課堂" }).click();
   await expect(page.getByRole("button", { name: "結束課堂" })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "開放", exact: true }).first(),
@@ -91,7 +94,7 @@ test("student auto-stops at ten seconds and uploads a bounded WAV", async ({
   questionStatus = "closed"; // Switching questions must not cut off an ongoing recording.
   await expect.poll(() => submitted, { timeout: 20000 }).not.toBeNull();
   await expect(
-    page.getByText("錄音已收到，正在評分。", { exact: true }),
+    page.getByText("已收到錄音，正在評分。", { exact: true }),
   ).toBeVisible();
   expect(submitted).toBeTruthy();
   const wav = Buffer.from(submitted.audio, "base64");
@@ -178,7 +181,7 @@ test("teacher sees mixed statuses, filters missing students, retries and exports
   expect(retried.sort()).toEqual(["r1", "r2"]);
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "下載紀錄" }).click();
-  expect((await download).suggestedFilename()).toBe("混合狀態-作答紀錄.csv");
+  expect((await download).suggestedFilename()).toBe("混合狀態-responses.csv");
 });
 
 test("failed upload survives reload and closed question, without rerecording", async ({

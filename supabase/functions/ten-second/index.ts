@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.110.8";
+import { generateSummary } from "./summary.ts";
 const db = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -263,6 +264,7 @@ Deno.serve(async (req) => {
       "open_question",
       "close_question",
       "dashboard",
+      "summarize",
       "audio",
       "retry",
       "delete_question",
@@ -455,6 +457,98 @@ Deno.serve(async (req) => {
             .eq("id", b.id),
         ) || { ok: true },
       );
+    if (action === "summarize") {
+      const q = check(
+        await db
+          .from("ts_questions")
+          .select("*")
+          .eq("id", str(b.id, 40))
+          .single(),
+      );
+      const language = b.language === "zh" ? "zh" : "en";
+      const responses = check(
+        await db
+          .from("ts_responses")
+          .select("id,member_id,status,result,path")
+          .eq("question_id", q.id)
+          .order("id"),
+      );
+      const members = check(
+        await db.from("ts_members").select("id").eq("class_id", q.class_id),
+      );
+      const readable = responses.filter(
+        (r) =>
+          r.status === "done" &&
+          r.result?.level !== "unscorable" &&
+          r.result?.transcript?.trim(),
+      );
+      if (!readable.length)
+        throw Error("尚無可整理的逐字稿 / No transcripts to summarize yet");
+      const fingerprint = await hash(
+        JSON.stringify({
+          prompt: q.prompt,
+          rubric: q.rubric,
+          mode: q.mode,
+          feedback: q.feedback_enabled,
+          responses,
+          members: members.length,
+        }),
+      );
+      const claimed = check(
+        await db.rpc("ts_claim_summary", {
+          qid: q.id,
+          lang: language,
+          version: fingerprint,
+        }),
+      );
+      if (claimed) {
+        try {
+          const result = await generateSummary(q, readable, language);
+          check(
+            await db
+              .from("ts_summaries")
+              .update({
+                status: "done",
+                result: {
+                  ...result,
+                  response_ids: readable.map((r) => r.id),
+                  snapshot: responses,
+                  member_count: members.length,
+                },
+              })
+              .eq("question_id", q.id)
+              .eq("language", language)
+              .eq("fingerprint", fingerprint),
+          );
+        } catch {
+          check(
+            await db
+              .from("ts_summaries")
+              .update({ status: "failed" })
+              .eq("question_id", q.id)
+              .eq("language", language)
+              .eq("fingerprint", fingerprint),
+          );
+          return reply(
+            {
+              error:
+                "摘要暫時無法產生，請重試。原始答案仍保留。 / Summary unavailable. Please retry; responses are saved.",
+            },
+            502,
+          );
+        }
+      }
+      return reply(
+        check(
+          await db
+            .from("ts_summaries")
+            .select("*")
+            .eq("question_id", q.id)
+            .eq("language", language)
+            .single(),
+        ),
+      );
+    }
     if (action === "dashboard") {
       const questions = check(
         await db
@@ -470,10 +564,29 @@ Deno.serve(async (req) => {
           .select("id,name,student_id,joined_at")
           .eq("class_id", b.classId),
       );
-      const responses = questions.length
-        ? check(
+      // A class can have 150 students × 80 questions, beyond the default 1,000-row API limit.
+      const responses: any[] = [];
+      if (questions.length) {
+        for (let offset = 0; ; offset += 1000) {
+          const page = check(
             await db
               .from("ts_responses")
+              .select("*")
+              .in(
+                "question_id",
+                questions.map((q) => q.id),
+              )
+              .order("id")
+              .range(offset, offset + 999),
+          );
+          responses.push(...page);
+          if (page.length < 1000) break;
+        }
+      }
+      const summaries = questions.length
+        ? check(
+            await db
+              .from("ts_summaries")
               .select("*")
               .in(
                 "question_id",
@@ -481,7 +594,7 @@ Deno.serve(async (req) => {
               ),
           )
         : [];
-      return reply({ questions, members, responses });
+      return reply({ questions, members, responses, summaries });
     }
     if (action === "audio" || action === "retry") {
       const r = check(

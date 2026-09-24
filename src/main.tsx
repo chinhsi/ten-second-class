@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { QRCodeSVG } from "qrcode.react";
 import { recordingToWav } from "./audio";
 import "./style.css";
+import { Discussion } from "./Discussion";
 const ENDPOINT =
   "https://fdfhyekuehybjkfyatjn.supabase.co/functions/v1/ten-second";
 async function api(action: string, data: any = {}) {
@@ -198,7 +199,9 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
   const responses = d.responses.filter(
     (r: any) => r.question_id === question?.id,
   );
-  const submitted = responses.filter((r: any) => r.status !== "recording");
+  const submitted = responses.filter(
+    (r: any) => r.status !== "recording" && (r.status !== "failed" || r.path),
+  );
   const done = submitted.filter((r: any) => r.status === "done");
   const joinURL = cls
     ? `${location.origin}${location.pathname}#join=${cls.code}`
@@ -760,10 +763,12 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
                 </div>
                 <div>
                   <strong>
-                    {
-                      done.filter((r: any) => r.result?.level === "understood")
-                        .length
-                    }
+                    {question?.mode === "answer" &&
+                    question?.feedback_enabled === false
+                      ? "—"
+                      : done.filter(
+                          (r: any) => r.result?.level === "understood",
+                        ).length}
                   </strong>
                   <span>
                     {question?.mode === "answer"
@@ -773,11 +778,12 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
                 </div>
                 <div>
                   <strong>
-                    {
-                      done.filter((r: any) =>
-                        ["partial", "not_yet"].includes(r.result?.level),
-                      ).length
-                    }
+                    {question?.mode === "answer" &&
+                    question?.feedback_enabled === false
+                      ? "—"
+                      : done.filter((r: any) =>
+                          ["partial", "not_yet"].includes(r.result?.level),
+                        ).length}
                   </strong>
                   <span>{t("Needs follow-up", "需要跟進")}</span>
                 </div>
@@ -786,21 +792,17 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
                   <span>{t("Not answered", "本題未答")}</span>
                 </div>
               </div>
-              {done.some((r: any) => r.result?.issue) && (
-                <div className="insights">
-                  <h3>{t("Things to follow up", "需要留意的地方")}</h3>
-                  <ul>
-                    {[
-                      ...new Set(
-                        done.map((r: any) => r.result?.issue).filter(Boolean),
-                      ),
-                    ]
-                      .slice(0, 8)
-                      .map((issue: any) => (
-                        <li key={issue}>{issue}</li>
-                      ))}
-                  </ul>
-                </div>
+              {question && (
+                <Discussion
+                  key={cls.id + question.id}
+                  question={question}
+                  members={d.members}
+                  responses={responses}
+                  summaries={d.summaries || []}
+                  lang={lang}
+                  call={call}
+                  stopAudio={() => setAudio("")}
+                />
               )}
               <div className="actions filters">
                 <button
