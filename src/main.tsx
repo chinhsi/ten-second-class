@@ -4,6 +4,8 @@ import { QRCodeSVG } from "qrcode.react";
 import { recordingToWav } from "./audio";
 import "./style.css";
 import { Discussion } from "./Discussion";
+import { questionTemplates } from "./questionTemplates";
+import { TeacherAccess } from "./TeacherAccess";
 const ENDPOINT =
   "https://fdfhyekuehybjkfyatjn.supabase.co/functions/v1/ten-second";
 async function api(action: string, data: any = {}) {
@@ -134,6 +136,7 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
   const t = (en: string, zh: string) => tx(lang, en, zh);
   const [owner, setOwner] = useState(sessionStorage.getItem("ts-owner") || "");
   const [logged, setLogged] = useState(false);
+  const [admin, setAdmin] = useState(false);
   const [classes, setClasses] = useState<any[]>([]);
   const [cls, setCls] = useState<any>(null);
   const [d, setD] = useState<any>({
@@ -286,6 +289,8 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
           onSubmit={(e) => {
             e.preventDefault();
             run(async () => {
+              const profile = await call("teacher_profile");
+              setAdmin(profile.admin === true);
               await refresh();
               sessionStorage.setItem("ts-owner", owner);
               setLogged(true);
@@ -294,7 +299,7 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
         >
           <h2>{t("Teacher workspace", "老師工作台")}</h2>
           <label>
-            {t("Owner key", "管理密碼")}
+            {t("Teacher access code / owner key", "老師登入碼／管理密碼")}
             <input
               type="password"
               autoComplete="current-password"
@@ -306,8 +311,8 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
           <button disabled={busy}>{t("Open workspace", "進入備課")}</button>
           <small>
             {t(
-              "Your InterAct owner key stays in this browser tab.",
-              "沿用你的 InterAct 管理密碼，僅保留在此分頁。",
+              "Use your personal teacher access code. The administrator can use the existing owner key. Stored only in this browser tab.",
+              "使用你的專屬老師登入碼；管理員可沿用原管理密碼。僅保留在此分頁。",
             )}
           </small>
           {error && (
@@ -368,9 +373,22 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
             </button>
           ))}
         </nav>
+        {admin && <TeacherAccess call={call} lang={lang} />}
         <button
           className="quiet"
           onClick={() => {
+            ++refreshVersion.current;
+            activeClass.current = undefined;
+            setCls(null);
+            setClasses([]);
+            setD({ questions: [], members: [], responses: [] });
+            setSelected("");
+            setEditing(null);
+            setPrompt("");
+            setRubric("");
+            setAudio("");
+            setError("");
+            setAdmin(false);
             sessionStorage.removeItem("ts-owner");
             setOwner("");
             setLogged(false);
@@ -474,6 +492,53 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
                     {d.questions.length} {t("questions", "題")}
                   </span>
                 </div>
+                <section
+                  className="quick-questions"
+                  aria-label={t("Question templates", "問題範本")}
+                >
+                  <h3>{t("Add a follow-up", "快速加追問")}</h3>
+                  <p>
+                    {t(
+                      "Create a draft, then press Open when ready. 10 seconds · transcription only.",
+                      "點一下新增草稿，準備好再按「開放」。10 秒作答・只轉錄，不評分。",
+                    )}
+                  </p>
+                  <div className="template-buttons">
+                    {questionTemplates.map((template) => (
+                      <button
+                        key={template.id}
+                        type="button"
+                        className="secondary"
+                        disabled={
+                          busy ||
+                          cls.status === "ended" ||
+                          d.questions.length >= 80
+                        }
+                        title={template.prompt[lang]}
+                        onClick={() =>
+                          run(async () => {
+                            const created = await call("save_question", {
+                              classId: cls.id,
+                              mode: "answer",
+                              prompt: template.prompt[lang],
+                              rubric: t(
+                                "Open discussion; no scoring",
+                                "開放討論，不評分",
+                              ),
+                              responseLanguage: "auto",
+                              feedbackEnabled: false,
+                              position: d.questions.length,
+                            });
+                            setSelected(created.id);
+                            await refresh();
+                          })
+                        }
+                      >
+                        ＋ {template.label[lang]}
+                      </button>
+                    ))}
+                  </div>
+                </section>
                 <div className="questions">
                   {d.questions.map((q: any, i: number) => (
                     <div

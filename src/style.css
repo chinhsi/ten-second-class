@@ -849,3 +849,45 @@ audio {
     padding: 20px;
   }
 }
+
+.quick-questions {
+  padding: 18px 0;
+  border-top: 1px solid #d8dfd5;
+}
+.quick-questions p {
+  font-size: 14px;
+  color: #52645b;
+}
+.template-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.teacher-access {
+  margin: 20px 0;
+}
+.access-panel {
+  padding: 12px;
+  background: #fff;
+  border-radius: 12px;
+  margin-top: 12px;
+}
+.access-panel p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.teacher-entry {
+  padding: 12px 0;
+  border-top: 1px solid #d8dfd5;
+}
+.teacher-entry small {
+  display: block;
+}
+.invitation {
+  background: #eef3e7;
+  padding: 10px;
+  margin: 12px 0;
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}

@@ -6,13 +6,29 @@
 
 ## 老師怎麼用
 
-1. 用原本的 InterAct 管理密碼進入老師工作台。
+1. 用專屬老師登入碼進入工作台；管理員可沿用原本的 InterAct 管理密碼。
 2. 建立課堂，預先存好題目。選「概念作答」時填問題及答案要點；選「朗讀發音」時填句子及目標語言／發音重點。評分要點不會顯示給學生。
 3. 分享 QR code 或加入連結。學生可先進入等待，不必安裝 App。
 4. 上課按 **啟用課堂（Enable class）**，再按題目旁的「開放」。
 5. 看即時回應、分數和回饋；可播放錄音、篩選未答學生、下載中文 CSV 紀錄。
 6. 「收題」停止接受新的錄音；已經開始的錄音可完成自己的10秒並上傳。「結束課堂」停止開新錄音。
 7. 需要清除資料時按「刪除課堂」，會一併刪除學生紀錄與錄音；仍在評分時需等處理完成。
+
+## 上課中快速追問
+
+「快速加追問」有四個預設範本：**補理由、舉例子、同意／不同意、重新回答**。點一下立即新增獨立草稿，再按該題的「開放」。需要調整時先按「編輯」。每次點擊都是新題，學生可以重新回答，舊答案保留。
+
+範本跟隨介面語言產生中文／英文題目，預設10秒、自動辨識語言、只轉錄不評分。新增範本不會清除尚未存好的手動題目。
+
+## 讓其他老師使用
+
+管理員登入後，在左側按 **管理老師使用權限 → 填老師姓名 → 產生專屬登入碼 → 複製登入資料**，再私下傳給該老師。登入碼只顯示一次，請勿放在投影片或學生群組。這個功能不會自動寄信。
+
+每位老師有自己的課堂、學生與錄音，無法查看其他老師或管理員的課堂。老師使用同一個網站，貼上自己的登入碼即可開始。管理員的舊課堂保留在原工作區。
+
+- 「停用」會阻止這位老師後續登入及操作，但不會刪除課堂，也不會改變正在進行的學生作答。需要結束課堂時，請老師先結束課堂再停用。
+- 「重設登入碼」立即使舊碼失效，顯示新碼；不會改變停用狀態。
+- 這一版採管理員發放登入碼，尚無電郵登入或公開註冊。AI 仍使用同一部署的服務與額度。
 
 ## 學生怎麼用
 
@@ -40,18 +56,22 @@ GitHub Actions 在推送 main 後自動部署 GitHub Pages。Supabase 使用現�
 ```sh
 supabase db query --linked --project-ref YOUR_PROJECT_REF --file supabase/schema.sql
 supabase db query --linked --project-ref YOUR_PROJECT_REF --file supabase/discussion.sql
+supabase db query --linked --project-ref YOUR_PROJECT_REF --file supabase/teachers.sql
 supabase functions deploy ten-second --project-ref YOUR_PROJECT_REF --no-verify-jwt
 ```
 
 Edge Function 使用 Supabase 的服務端金鑰、`INTERACT_OWNER_KEY` 和 `GEMINI_API_KEY`；均不可放進前端或 GitHub。`TEN_SECOND_MODEL` 可指定 Gemini 模型。前端只包含公開的後端網址。
 
-所有資料表啟用 RLS 並撤銷匿名／一般登入角色的直接存取；Edge Function 驗證教師密碼或學生隨機憑證。錄音私有，老師取得的播放連結 120 秒後失效。伺服器檢查實際 WAV 的格式及長度，不信任客戶端秒數。可在老師介面手動刪除整堂課和錄音；沒有自動到期刪除，正式收集前應由老師決定保存期限。
+所有資料表啟用 RLS 並撤銷匿名／一般登入角色的直接存取；Edge Function 驗證教師登入碼或學生隨機憑證，逐一核對課堂歸屬；原管理員的課堂以空的 teacher_id 表示，並非讀取全站資料的萬用權限。老師登入碼由伺服器隨機產生，資料庫只存雜湊值。錄音私有，老師取得的播放連結 120 秒後失效。伺服器檢查實際 WAV 的格式及長度，不信任客戶端秒數。可在老師介面手動刪除整堂課和錄音；沒有自動到期刪除，正式收集前應由老師決定保存期限。
 
 ## 驗證
 
 - `npm test`：Chrome 瀏覽器測試（需先 `npm run dev -- --port 5179`）。含課前雙模式備題、啟用課堂、10 秒自動停止和 WAV 上限。
 - `python3 scripts/verify-live.py`：有副作用的線上整合驗證，只限部署者執行。從 macOS Keychain 讀取教師密碼，建立測試課堂、使用三段合成／靜音錄音，會呼叫 AI；不顯示金鑰。
 - AI 介面依據 [Gemini 結構化輸出文件](https://ai.google.dev/gemini-api/docs/generate-content/structured-output)；音訊處理依據 [音訊理解文件](https://ai.google.dev/gemini-api/docs/audio)。
+
+- `node scripts/test-teacher-access.mjs`：99 項老師權限判斷測試，包含跨課堂編輯、錄音、摘要及原管理員工作區。
+- `python3 scripts/verify-teachers.py`：線上建立兩位臨時老師及課堂、驗證隔離與停用後清除；需 Supabase CLI 管理權限及 Python `certifi` 憑證套件。不寄信、不上傳錄音、不呼叫 AI。
 
 ## 來源與授權
 
@@ -80,3 +100,9 @@ Edge Function 使用 Supabase 的服務端金鑰、`INTERACT_OWNER_KEY` 和 `GEM
 - 英文與中文介面均可用，AI 摘要按所選語言分別保存。自動摘要需要老師工作台保持開啟。失敗時按「立即整理」重試，原答案不受影響。
 
 驗證：`node --experimental-strip-types scripts/test-discussion.mjs`（統計與證據檢查）；`npm test`（教師／学生瀏覽器流程）。`python3 scripts/verify-summary.py` 會建立合成測試資料並呼叫最多兩次 AI 摘要，最後清除，不應在一般測試中自動執行。
+
+## 2026-10-06 範本與多老師工作區驗證
+
+- 前端建置與 9 項 Chrome 操作測試通過，包含範本保留未存編輯、中英切換、再次開题及老師管理介面。
+- 99 項權限判斷檢查、28 項線上雙老師隔離／停用／學生流程檢查通過；臨時帳號與課堂已清除，未呼叫 AI。
+- 管理員新增／重設登入碼介面已用模擬 API 測試；目前管理密碼未存於可用測試環境，因此未以真實管理員登入碼執行這兩個線上操作，亦未重設既有管理密碼。

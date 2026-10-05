@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.110.8";
 import { generateSummary } from "./summary.ts";
+import { teacherActions, canAccessTeacherResource } from "./teacherAccess.ts";
 const db = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -256,23 +257,86 @@ Deno.serve(async (req) => {
       !!Deno.env.get("INTERACT_OWNER_KEY") &&
       (await hash(b.owner)) ===
         (await hash(Deno.env.get("INTERACT_OWNER_KEY")!));
-    const teacherActions = [
-      "classes",
-      "create",
-      "save_question",
-      "class_status",
-      "open_question",
-      "close_question",
-      "dashboard",
-      "summarize",
-      "audio",
-      "retry",
-      "delete_question",
-      "delete_class",
+    const adminActions = [
+      "teachers",
+      "create_teacher",
+      "teacher_status",
+      "reset_teacher_key",
     ];
-    if (teacherActions.includes(action) && !owner) {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      return reply({ error: "老師管理密碼不正確" }, 401);
+    let teacherId: string | null = null;
+    if (adminActions.includes(action) && !owner)
+      return reply(
+        { error: "需要管理員權限 / Administrator access required" },
+        403,
+      );
+    if (teacherActions.includes(action) || action === "teacher_profile") {
+      if (!owner) {
+        const teacher =
+          typeof b.owner === "string" && b.owner.length <= 200
+            ? check(
+                await db
+                  .from("ts_teachers")
+                  .select("id,display_name")
+                  .eq("key_hash", await hash(b.owner))
+                  .eq("active", true)
+                  .maybeSingle(),
+              )
+            : null;
+        if (!teacher) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          return reply(
+            { error: "登入碼無效或已停用 / Invalid or disabled access code" },
+            401,
+          );
+        }
+        teacherId = teacher.id;
+      }
+      if (action === "teacher_profile")
+        return reply({ admin: owner, id: teacherId });
+      if (!(await canAccessTeacherResource(db, action, b, teacherId)))
+        return reply({ error: "無法存取此課堂 / Class unavailable" }, 403);
+    }
+    if (action === "teachers")
+      return reply(
+        check(
+          await db
+            .from("ts_teachers")
+            .select("id,display_name,active,created_at")
+            .order("created_at", { ascending: false }),
+        ),
+      );
+    if (action === "create_teacher" || action === "reset_teacher_key") {
+      const accessCode =
+        crypto.randomUUID().replaceAll("-", "") +
+        crypto.randomUUID().replaceAll("-", "");
+      const key_hash = await hash(accessCode);
+      const result =
+        action === "create_teacher"
+          ? await db
+              .from("ts_teachers")
+              .insert({ display_name: str(b.name, 100), key_hash })
+              .select("id,display_name,active")
+              .single()
+          : await db
+              .from("ts_teachers")
+              .update({ key_hash })
+              .eq("id", str(b.id, 40))
+              .select("id,display_name,active")
+              .single();
+      return reply({ ...check(result), accessCode });
+    }
+    if (action === "teacher_status") {
+      if (typeof b.active !== "boolean") throw Error("Invalid status");
+      return reply(
+        check(
+          await db
+            .from("ts_teachers")
+            .update({ active: b.active })
+            .eq("id", str(b.id, 40))
+            .select("id,display_name,active")
+            .single(),
+        ),
+      );
     }
     if (action === "delete_class") {
       const id = str(b.classId, 40);
@@ -340,15 +404,19 @@ Deno.serve(async (req) => {
       check(await db.from("ts_classes").delete().eq("id", id));
       return reply({ ok: true });
     }
-    if (action === "classes")
+    if (action === "classes") {
+      const query = db
+        .from("ts_classes")
+        .select("*")
+        .order("created_at", { ascending: false });
       return reply(
         check(
-          await db
-            .from("ts_classes")
-            .select("*")
-            .order("created_at", { ascending: false }),
+          await (teacherId
+            ? query.eq("teacher_id", teacherId)
+            : query.is("teacher_id", null)),
         ),
       );
+    }
     if (action === "create") {
       const code = crypto
         .randomUUID()
@@ -359,7 +427,7 @@ Deno.serve(async (req) => {
         check(
           await db
             .from("ts_classes")
-            .insert({ title: str(b.title, 100), code })
+            .insert({ title: str(b.title, 100), code, teacher_id: teacherId })
             .select()
             .single(),
         ),
@@ -718,7 +786,12 @@ Deno.serve(async (req) => {
           .eq("member_id", member.id),
       );
       return reply({
-        class: cls,
+        class: {
+          id: cls.id,
+          code: cls.code,
+          title: cls.title,
+          status: cls.status,
+        },
         member: { name: member.name },
         questions,
         responses,

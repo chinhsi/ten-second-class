@@ -291,3 +291,64 @@ test("student can discard a stuck old recording and reach the new question", asy
     await page.evaluate(() => sessionStorage.getItem("ts-recording-old")),
   ).toBeNull();
 });
+
+test("follow-up templates create separate unscored drafts and preserve manual work", async ({
+  page,
+}) => {
+  const cls = { id: "c", code: "CODE", title: "即時追問", status: "active" };
+  const questions: any[] = [];
+  const actions: any[] = [];
+  await page.route(endpoint, async (route) => {
+    const b = route.request().postDataJSON();
+    actions.push(b);
+    let data: any = {};
+    if (b.action === "classes") data = [cls];
+    if (b.action === "dashboard")
+      data = { questions, members: [], responses: [] };
+    if (b.action === "save_question") {
+      data = { ...b, id: `q${questions.length}`, status: "draft" };
+      questions.push(data);
+    }
+    if (b.action === "open_question") {
+      questions.forEach(
+        (q) => (q.status = q.id === b.id ? "active" : "closed"),
+      );
+    }
+    await route.fulfill({ json: data });
+  });
+  await page.goto("/ten-second-class/");
+  await page.getByLabel("管理密碼").fill("test");
+  await page.getByRole("button", { name: "進入備課" }).click();
+  await page.getByRole("button", { name: "即時追問 進行中" }).click();
+  await page.getByLabel("問題", { exact: true }).fill("尚未完成的題目");
+  const labels = ["補理由", "舉例子", "同意／不同意", "重新回答", "補理由"];
+  for (const [i, label] of labels.entries()) {
+    await page
+      .getByRole("button", { name: `＋ ${label}`, exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "開放", exact: true }),
+    ).toHaveCount(i + 1);
+  }
+  expect(questions).toHaveLength(5);
+  for (const q of questions) {
+    expect(q.mode).toBe("answer");
+    expect(q.feedbackEnabled).toBe(false);
+    expect(q.responseLanguage).toBe("auto");
+    expect(q.status).toBe("draft");
+  }
+  expect(actions.filter((b) => b.action === "open_question")).toHaveLength(0);
+  await expect(
+    page.getByRole("textbox", { name: "問題", exact: true }),
+  ).toHaveValue("尚未完成的題目");
+  await page.getByRole("button", { name: "開放", exact: true }).last().click();
+  await expect.poll(() => questions.at(-1).status).toBe("active");
+  await page.getByRole("button", { name: "English", exact: true }).click();
+  await page
+    .getByRole("button", { name: "＋ Give an example", exact: true })
+    .click();
+  await expect.poll(() => questions.length).toBe(6);
+  expect(questions.at(-1).prompt).toBe(
+    "Give an example to explain the idea we just discussed.",
+  );
+});
