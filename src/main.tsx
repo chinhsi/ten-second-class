@@ -6,6 +6,7 @@ import "./style.css";
 import { Discussion } from "./Discussion";
 import { questionTemplates } from "./questionTemplates";
 import { TeacherAccess } from "./TeacherAccess";
+import { TeacherGuide } from "./TeacherGuide";
 const ENDPOINT =
   "https://fdfhyekuehybjkfyatjn.supabase.co/functions/v1/ten-second";
 async function api(action: string, data: any = {}) {
@@ -87,6 +88,7 @@ function App() {
     return () => removeEventListener("hashchange", f);
   }, []);
   const code = new URLSearchParams(hash.slice(1)).get("join");
+  const guide = hash === "#guide";
   function changeLanguage(next: "en" | "zh") {
     setLang(next);
     localStorage.setItem("ts-language", next);
@@ -102,6 +104,16 @@ function App() {
             "一句話，看見每個人的理解。",
           )}
         </span>
+        {!guide && (
+          <a
+            className="guide-link"
+            href="#guide"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {tx(lang, "Teacher guide ↗", "使用說明 ↗")}
+          </a>
+        )}
         <div
           className="language-switch"
           role="group"
@@ -121,7 +133,13 @@ function App() {
           </button>
         </div>
       </header>
-      {code ? <Student code={code} lang={lang} /> : <Teacher lang={lang} />}
+      {guide ? (
+        <TeacherGuide lang={lang} />
+      ) : code ? (
+        <Student code={code} lang={lang} />
+      ) : (
+        <Teacher lang={lang} />
+      )}
       <footer>
         {tx(
           lang,

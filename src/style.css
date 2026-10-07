@@ -891,3 +891,73 @@ audio {
   border-radius: 8px;
   overflow-wrap: anywhere;
 }
+
+header .guide-link {
+  font-size: 14px;
+  letter-spacing: 0;
+  margin: 0 12px;
+}
+.teacher-guide {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 48px 24px;
+}
+.teacher-guide h1 {
+  font-size: clamp(30px, 5vw, 46px);
+  margin-bottom: 12px;
+}
+.guide-intro {
+  color: #52645b;
+  font-size: 18px;
+}
+.guide-start {
+  display: inline-block;
+  margin: 8px 0 24px;
+  font-weight: 600;
+}
+.guide-overview {
+  padding: 20px;
+  background: #e6edde;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  font-weight: 600;
+}
+.guide-sections {
+  display: grid;
+  gap: 20px;
+}
+.teacher-guide h2 {
+  font-size: 23px;
+  margin-top: 0;
+}
+.teacher-guide ol {
+  padding-left: 24px;
+  margin-bottom: 0;
+}
+.teacher-guide li {
+  padding-left: 4px;
+  margin: 14px 0;
+}
+.guide-faq {
+  margin-top: 24px;
+}
+.guide-faq details {
+  padding: 16px 0;
+  border-bottom: 1px solid #dedfd4;
+}
+.guide-faq details:last-child {
+  border-bottom: 0;
+}
+.guide-faq summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+@media (max-width: 600px) {
+  header .guide-link {
+    font-size: 12px;
+    margin: 0 8px;
+  }
+  .teacher-guide {
+    padding: 32px 16px;
+  }
+}

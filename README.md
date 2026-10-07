@@ -4,6 +4,8 @@
 
 **網站：https://chinhsi.github.io/ten-second-class/**
 
+給其他老師的[中英雙語使用說明](https://chinhsi.github.io/ten-second-class/#guide)，不必登入即可閱讀；網站右上角也有入口。
+
 ## 老師怎麼用
 
 1. 用專屬老師登入碼進入工作台；管理員可沿用原本的 InterAct 管理密碼。
