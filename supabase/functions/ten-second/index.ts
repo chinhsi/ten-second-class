@@ -187,7 +187,7 @@ async function assess(
       throw Error(
         `AI HTTP ${r.status}: ${String(err.error?.message || "")
           .replaceAll(key, "[redacted]")
-          .slice(0, 300)}`,
+          .slice(0, 1500)}`,
       );
     }
     const j = await r.json();
@@ -242,12 +242,20 @@ async function assess(
         .eq("submitted_at", submittedAt),
     );
   } catch (e) {
+    const message = e instanceof Error ? e.message : "AI failed";
+    const feedback = message.includes("AI HTTP 429")
+      ? "錄音已保存。Google AI 請求量或配額已達上限，暫時無法處理；請老師稍後重試，若持續發生需檢查 AI 配額。"
+      : /AI HTTP 50[0234]/.test(message)
+        ? "錄音已保存。Google AI 目前忙碌，自動重試後仍未完成；請老師稍後重試。"
+        : /timed? ?out|timeout/i.test(message)
+          ? "錄音已保存。AI 回應逾時，自動重試後仍未完成；請老師稍後重試。"
+          : "錄音已保存，AI 處理未完成。老師可重試，學生不必重新錄音。";
     await db
       .from("ts_responses")
       .update({
         status: "failed",
-        debug_error: e instanceof Error ? e.message : "AI failed",
-        result: { feedback: "錄音已收到，AI 評分未完成。老師可重試評分。" },
+        debug_error: message,
+        result: { feedback },
       })
       .eq("id", id)
       .eq("status", "processing")
