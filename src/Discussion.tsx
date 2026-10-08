@@ -1,3 +1,4 @@
+import { WordCloud } from "./WordCloud";
 import { useEffect, useRef, useState } from "react";
 import {
   responseStats,
@@ -125,6 +126,7 @@ export function Discussion({
   const [choice, setChoice] = useState("");
   const [shown, setShown] = useState<ResponseRow | null>(null);
   const [evidence, setEvidence] = useState<string[] | null>(null);
+  const [wordEvidence, setWordEvidence] = useState(false);
   const [audio, setAudio] = useState("");
   const [audioBusy, setAudioBusy] = useState(false);
   const [audioError, setAudioError] = useState("");
@@ -223,6 +225,23 @@ export function Discussion({
           )}
         </p>
       )}
+      {question.mode === "answer" && (
+        <WordCloud
+          responses={responses}
+          prompt={question.prompt}
+          lang={lang}
+          stopAudio={stopAudio}
+          onEvidence={(ids) => {
+            setWordEvidence(true);
+            setEvidence(ids);
+            requestAnimationFrame(() =>
+              document
+                .querySelector(".evidence-list")
+                ?.scrollIntoView({ behavior: "smooth", block: "nearest" }),
+            );
+          }}
+        />
+      )}
       <div className="section-title">
         <h3>{t("Class summary", "全班摘要")}</h3>
         <button
@@ -303,7 +322,10 @@ export function Discussion({
                   <p>{g.detail}</p>
                   <button
                     className="quiet"
-                    onClick={() => setEvidence(g.response_ids)}
+                    onClick={() => {
+                      setWordEvidence(false);
+                      setEvidence(g.response_ids);
+                    }}
                   >
                     {t("View supporting answers", "查看相關原話")}
                   </button>
@@ -325,7 +347,10 @@ export function Discussion({
                     <p className="follow-up">{g.follow_up}</p>
                     <button
                       className="quiet"
-                      onClick={() => setEvidence(g.response_ids)}
+                      onClick={() => {
+                        setWordEvidence(false);
+                        setEvidence(g.response_ids);
+                      }}
                     >
                       {t("View supporting answers", "查看相關原話")}
                     </button>
@@ -359,7 +384,11 @@ export function Discussion({
             .filter((r) => evidence.includes(r.id))
             .map((r) => (
               <article key={r.id}>
-                <strong>{label(r)}</strong>
+                <strong>
+                  {wordEvidence
+                    ? `${t("Response", "回答")} ${members.findIndex((m) => m.id === r.member_id) + 1}`
+                    : label(r)}
+                </strong>
                 <p>{r.result?.transcript}</p>
                 <button className="secondary" onClick={() => exhibit(r)}>
                   {t("Present this answer", "展示這個回答")}

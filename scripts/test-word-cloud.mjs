@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {buildWordCloud} from '../src/wordCloudLogic.ts';
+const row=(id,transcript,status='done',level='transcribed')=>({id,member_id:'PRIVATE NAME',status,result:{transcript,level}});
+const a=row('a','AI AI AI. Google Sheet 評價，批判思考。');
+const output=buildWordCloud([a,a,row('b','Google Sheets and AI help with writing.'),row('c','AI','processing'),row('d','AI','failed'),row('e','AI','done','unscorable')]);
+assert.equal(output.responses,2);
+assert.equal(output.words.find(x=>x.text==='AI').count,2);
+assert.deepEqual(output.words.find(x=>x.text==='Google Sheets').responseIds,['a','b']);
+assert(!output.words.some(x=>x.text==='and'||x.text.includes('PRIVATE')));
+assert(buildWordCloud([row('a','我覺得今天學到了，嗯，謝謝。')]).words.length===0);
+assert.equal(buildWordCloud([]).words.length,0);
+assert(buildWordCloud([row('a','<script>alert("XSS")</script>')]).words.every(x=>!x.text.includes('<')));
+console.log('PASS: per-response counts, duplicate IDs, mixed-language segmentation, common filler removal, exclusion of pending/failed/unclear, no identity fields.');
