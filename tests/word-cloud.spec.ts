@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-test("open-ended word cloud counts responses, shows anonymous evidence, and projects without AI requests", async ({
+test("concept cloud waits for semantic grouping, shares summary, and shows anonymous evidence", async ({
   page,
 }) => {
   let aiCalls = 0;
@@ -49,30 +49,78 @@ test("open-ended word cloud counts responses, shows anonymous evidence, and proj
         ],
         summaries: [],
       };
-    if (b.action === "summarize") aiCalls++;
+    if (b.action === "summarize") {
+      aiCalls++;
+      data = {
+        question_id: "q",
+        language: b.language,
+        status: "done",
+        started_at: new Date().toISOString(),
+        result: {
+          concept_version: 1,
+          overview: "課堂應用與反思",
+          themes: [
+            {
+              title:
+                b.language === "en"
+                  ? "AI-assisted lesson design"
+                  : "AI 輔助教學設計",
+              detail: "整理教學應用",
+              response_ids: ["r1", "r2"],
+              count: 2,
+            },
+          ],
+          gaps: [],
+          next_question: "如何應用？",
+          response_ids: ["r1", "r2"],
+          member_count: 3,
+          snapshot: [
+            {
+              id: "r1",
+              status: "done",
+              result: {
+                level: "transcribed",
+                transcript: "AI AI Google Sheets 批判思考 課程設計",
+              },
+            },
+            {
+              id: "r2",
+              status: "done",
+              result: {
+                level: "transcribed",
+                transcript:
+                  "Google Sheet and AI. 創意 反思 回饋 合作 學生 教學",
+              },
+            },
+          ],
+        },
+      };
+    }
     await route.fulfill({ json: data });
   });
   await page.goto("/ten-second-class/");
   await page.getByLabel("管理密碼").fill("test");
   await page.getByRole("button", { name: "進入備課" }).click();
   await page.getByRole("button", { name: "文字雲測試 進行中" }).click();
-  const section = page.getByRole("region", { name: "文字雲總結" });
+  const section = page.getByRole("region", { name: "概念雲總結" });
   await expect(
     section.getByRole("button", { name: "AI：2 份回答", exact: true }),
-  ).toBeVisible();
+  ).toHaveCount(0);
+  expect(aiCalls).toBe(0);
+  await section.getByRole("button", { name: "歸納關鍵概念" }).click();
   await expect(
     section.getByRole("button", {
-      name: "Google Sheets：2 份回答",
+      name: "AI 輔助教學設計：2 份回答",
       exact: true,
     }),
   ).toBeVisible();
   await section
-    .getByRole("button", { name: "AI：2 份回答", exact: true })
+    .getByRole("button", { name: "AI 輔助教學設計：2 份回答", exact: true })
     .click();
   await expect(page.locator(".evidence-list")).toContainText("回答 1");
   await expect(page.locator(".evidence-list")).not.toContainText("PRIVATE");
-  await section.getByRole("button", { name: "投影文字雲" }).click();
-  const dialog = page.getByRole("dialog", { name: "文字雲投影" });
+  await section.getByRole("button", { name: "投影概念雲" }).click();
+  const dialog = page.getByRole("dialog", { name: "概念雲投影" });
   await expect(dialog).toBeVisible();
   await expect(dialog).not.toContainText("PRIVATE");
   await page.screenshot({
@@ -90,9 +138,24 @@ test("open-ended word cloud counts responses, shows anonymous evidence, and proj
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
-  expect(aiCalls).toBe(0);
+  expect(aiCalls).toBe(1);
+  await page.getByLabel("概念呈現語言").selectOption("en");
+  await expect(
+    section.getByRole("button", {
+      name: "AI 輔助教學設計：2 份回答",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await section.getByRole("button", { name: "歸納關鍵概念" }).click();
+  await expect(
+    section.getByRole("button", {
+      name: "AI-assisted lesson design：2 份回答",
+      exact: true,
+    }),
+  ).toBeVisible();
+  expect(aiCalls).toBe(2);
   await page.getByRole("button", { name: "English", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "Present word cloud" }),
+    page.getByRole("button", { name: "Present concept cloud" }),
   ).toBeVisible();
 });

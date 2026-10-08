@@ -154,7 +154,7 @@ test("summary waits for processing, updates once, and presents anonymously witho
   members.push({ id: "m3", name: "Cara", student_id: "S3" });
   await expect(
     page.getByText(
-      "New or changed responses: update this summary before discussing it.",
+      "Responses or the concept grouping have changed. Update this summary before discussing it.",
     ),
   ).toBeVisible({ timeout: 10000 });
   expect(calls).toBe(1);

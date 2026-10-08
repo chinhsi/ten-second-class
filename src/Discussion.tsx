@@ -40,6 +40,10 @@ export function Discussion({
   stopAudio,
 }: Props) {
   const t = (en: string, zh: string) => (lang === "zh" ? zh : en);
+  const [summaryLanguage, setSummaryLanguage] = useState<"en" | "zh">(lang);
+  useEffect(() => {
+    if (question.mode !== "answer") setSummaryLanguage(lang);
+  }, [lang, question.mode]);
   const stats = responseStats(responses, members.length);
   const scoring =
     question.mode !== "answer" || question.feedback_enabled !== false;
@@ -58,10 +62,10 @@ export function Discussion({
     };
   }, []);
   const saved = summaries.find(
-    (s) => s.question_id === question.id && s.language === lang,
+    (s) => s.question_id === question.id && s.language === summaryLanguage,
   );
   const summary =
-    localSummary?.language === lang &&
+    localSummary?.language === summaryLanguage &&
     (!saved ||
       Date.parse(localSummary.started_at) > Date.parse(saved.started_at) ||
       (localSummary.started_at === saved.started_at &&
@@ -73,9 +77,10 @@ export function Discussion({
   const result = summary?.result;
   const stale =
     result &&
-    (snapshot(result.snapshot || []) !== currentSnapshot ||
+    ((question.mode === "answer" && result.concept_version !== 1) ||
+      snapshot(result.snapshot || []) !== currentSnapshot ||
       result.member_count !== members.length);
-  const signature = `${lang}:${members.length}:${currentSnapshot}`;
+  const signature = `${summaryLanguage}:${members.length}:${currentSnapshot}`;
   const readable = discussionCandidates(responses, "all", [], false).filter(
     (r) => r.result?.level !== "unscorable",
   );
@@ -87,7 +92,10 @@ export function Discussion({
     setBusy(true);
     setError("");
     try {
-      const next = await call("summarize", { id: question.id, language: lang });
+      const next = await call("summarize", {
+        id: question.id,
+        language: summaryLanguage,
+      });
       if (mounted.current) setLocalSummary(next);
     } catch (e) {
       if (mounted.current) setError((e as Error).message);
@@ -228,6 +236,12 @@ export function Discussion({
       {question.mode === "answer" && (
         <WordCloud
           responses={responses}
+          result={stale ? null : result}
+          summaryLanguage={summaryLanguage}
+          onLanguage={setSummaryLanguage}
+          busy={busy || processing}
+          canSummarize={!!readable.length}
+          onSummarize={() => void summarize()}
           prompt={question.prompt}
           lang={lang}
           stopAudio={stopAudio}
@@ -296,8 +310,8 @@ export function Discussion({
           {stale && (
             <p className="stale" role="status">
               {t(
-                "New or changed responses: update this summary before discussing it.",
-                "有新增或更新的答案，請更新摘要後再討論。",
+                "Responses or the concept grouping have changed. Update this summary before discussing it.",
+                "答案或概念歸納方式已更新，請重新整理後再討論。",
               )}
             </p>
           )}

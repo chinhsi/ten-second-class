@@ -574,6 +574,7 @@ Deno.serve(async (req) => {
         throw Error("尚無可整理的逐字稿 / No transcripts to summarize yet");
       const fingerprint = await hash(
         JSON.stringify({
+          concept_version: 1,
           prompt: q.prompt,
           rubric: q.rubric,
           mode: q.mode,
