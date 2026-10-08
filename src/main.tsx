@@ -1,3 +1,4 @@
+import { retryConcurrent } from "./concurrency";
 import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { QRCodeSVG } from "qrcode.react";
@@ -902,15 +903,25 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
                   }
                   onClick={() =>
                     run(async () => {
-                      for (const r of d.responses.filter(
-                        (r: any) =>
-                          r.path &&
-                          (r.status === "failed" ||
-                            (r.status === "processing" &&
-                              Date.now() - Date.parse(r.submitted_at) > 90000)),
-                      ))
-                        await call("retry", { id: r.id });
+                      const failed = await retryConcurrent(
+                        d.responses.filter(
+                          (r: any) =>
+                            r.path &&
+                            (r.status === "failed" ||
+                              (r.status === "processing" &&
+                                Date.now() - Date.parse(r.submitted_at) >
+                                  90000)),
+                        ),
+                        (r: any) => call("retry", { id: r.id }),
+                      );
                       await refresh();
+                      if (failed)
+                        throw Error(
+                          t(
+                            `${failed} retries could not start. Please retry again.`,
+                            `${failed} 份未能啟動重試，請再按重試。`,
+                          ),
+                        );
                     })
                   }
                 >
