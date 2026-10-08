@@ -176,7 +176,7 @@ test("teacher sees mixed statuses, filters missing students, retries and exports
   await expect(page.locator("tbody tr")).toHaveCount(2);
   await page.getByRole("button", { name: "本堂尚未提交", exact: true }).click();
   await expect(page.locator("tbody tr")).toHaveCount(2);
-  await page.getByRole("button", { name: "重試全部未完成評分" }).click();
+  await page.getByRole("button", { name: "補處理未完成作答" }).click();
   await expect.poll(() => retried.length).toBe(2);
   expect(retried.sort()).toEqual(["r1", "r2"]);
   const download = page.waitForEvent("download");

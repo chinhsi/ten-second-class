@@ -1,3 +1,4 @@
+import { startVisiblePolling, studentPollDelay } from "./polling";
 import { retryConcurrent } from "./concurrency";
 import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
@@ -202,17 +203,20 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
       setBusy(false);
     }
   }
+  const teacherPolling = useRef({ cls, d });
+  teacherPolling.current = { cls, d };
   useEffect(() => {
     if (!logged || !cls) return;
-    let active = true;
-    const timer = setInterval(() => {
-      if (!active) return;
-      refresh().catch((e) => setError(e.message));
-    }, 4000);
-    return () => {
-      active = false;
-      clearInterval(timer);
-    };
+    return startVisiblePolling(
+      () => refresh().catch((e) => setError(e.message)),
+      () => {
+        const current = teacherPolling.current;
+        if (current.d.responses.some((r: any) => r.status === "processing"))
+          return 4000;
+        return current.cls?.status === "active" ? 4000 : 30000;
+      },
+      false,
+    );
   }, [logged, cls?.id, owner]);
   const question =
     d.questions.find((q: any) => q.id === selected) ||
@@ -925,7 +929,7 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
                     })
                   }
                 >
-                  {t("Retry incomplete assessments", "重試全部未完成評分")}
+                  {t("Process unfinished responses", "補處理未完成作答")}
                 </button>
                 {[
                   ["all", t("All", "全部")],
@@ -941,6 +945,12 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
                   </button>
                 ))}
               </div>
+              <p className="muted">
+                {t(
+                  "Process unfinished responses retries saved recordings that failed or have been processing for over 90 seconds. Completed responses are kept; students do not need to record again.",
+                  "補處理會重試已保存但失敗、或處理超過 90 秒的錄音；已完成的結果保留，學生不用重錄。",
+                )}
+              </p>
               <p className="muted">
                 {t(
                   "The list contains students who joined by QR code.",
@@ -1047,7 +1057,7 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
                                     })
                                   }
                                 >
-                                  {t("Retry assessment", "重試評分")}
+                                  {t("Retry AI processing", "重試 AI 處理")}
                                 </button>
                               )}
                             </td>
@@ -1108,14 +1118,14 @@ function Student({ code, lang }: { code: string; lang: "en" | "zh" }) {
       .then(setInfo)
       .catch((e) => setError(e.message));
   }, [code]);
+  const studentPolling = useRef(state);
+  studentPolling.current = state;
   useEffect(() => {
     if (!joined) return;
-    refresh().catch((e) => setError(e.message));
-    const t = setInterval(
+    return startVisiblePolling(
       () => refresh().catch((e) => setError(e.message)),
-      3000,
+      () => studentPollDelay(studentPolling.current),
     );
-    return () => clearInterval(t);
   }, [joined, code]);
   const q =
     recordingQuestion ||
@@ -1205,7 +1215,11 @@ function Student({ code, lang }: { code: string; lang: "en" | "zh" }) {
                 (r: any) => r.question_id === q.id,
               )}
               onRecording={() => setRecordingQuestion(q)}
-              onDiscard={() => setRecordingQuestion(null)}
+              onDiscard={() => {
+                setRecordingQuestion(null);
+                // Removing sessionStorage alone does not trigger a parent render.
+                setState((current: any) => ({ ...current }));
+              }}
               onSubmitted={async () => {
                 await refresh();
                 setRecordingQuestion(null);

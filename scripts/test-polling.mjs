@@ -1,0 +1,35 @@
+import assert from 'node:assert/strict';
+import { startVisiblePolling, studentPollDelay } from '../src/polling.ts';
+const realSet = globalThis.setTimeout, realClear = globalThis.clearTimeout;
+const pending = new Map(); let next = 0; const listeners = new Set();
+globalThis.setTimeout = (fn, delay) => { const id=++next; pending.set(id,{fn,delay}); return id; };
+globalThis.clearTimeout = id => pending.delete(id);
+globalThis.document = {hidden:false, addEventListener:(_name,fn)=>listeners.add(fn), removeEventListener:(_name,fn)=>listeners.delete(fn)};
+const flush = async () => { for(let i=0;i<8;i++) await Promise.resolve(); };
+const visibility = hidden => { document.hidden=hidden; for(const fn of listeners)fn(); };
+const fire = () => { const [id,t]=pending.entries().next().value; pending.delete(id);t.fn(); };
+try {
+ let calls=0; let release;
+ const stop=startVisiblePolling(()=>{calls++;return new Promise(r=>{release=r});},()=>3000);
+ assert.equal(calls,1);assert.equal(pending.size,0);
+ visibility(true);visibility(false);assert.equal(calls,1,'no overlapping automatic refresh');
+ release();await flush();assert.equal(pending.size,1);
+ visibility(true);assert.equal(pending.size,0,'hidden cancels timer');
+ visibility(false);assert.equal(calls,2,'return to page refreshes immediately');
+ stop();release();await flush();assert.equal(pending.size,0);assert.equal(listeners.size,0);
+ document.hidden=true;
+ const stopHidden=startVisiblePolling(async()=>{calls++;},()=>10000);
+ assert.equal(calls,2,'starting hidden makes no request');
+ visibility(false);await flush();assert.equal(calls,3);assert.equal([...pending.values()][0].delay,10000);
+ stopHidden();
+ let errors=0;const stopErrors=startVisiblePolling(async()=>{errors++;throw Error('offline');},()=>10000);
+ await flush();fire();await flush();assert.equal(errors,2,'transient errors keep scheduled retry');stopErrors();
+ const state={class:{status:'active'},questions:[{id:'q',status:'active'}],responses:[]};
+ assert.equal(studentPollDelay(state),3000);
+ assert.equal(studentPollDelay({...state,responses:[{question_id:'q',status:'done'}]}),10000);
+ assert.equal(studentPollDelay({...state,responses:[{question_id:'q',status:'failed'}]}),10000);
+ assert.equal(studentPollDelay({...state,questions:[]}),10000);
+ assert.equal(studentPollDelay({...state,class:{status:'ended'}}),30000);
+ assert.equal(studentPollDelay({...state,class:{status:'ended'},responses:[{status:'processing'}]}),3000);
+ console.log('PASS: hidden pause/resume, no overlap, cleanup in-flight, error recovery, active/waiting/completed/failed/ended/processing intervals. No live API calls.');
+} finally {globalThis.setTimeout=realSet;globalThis.clearTimeout=realClear;delete globalThis.document;}
