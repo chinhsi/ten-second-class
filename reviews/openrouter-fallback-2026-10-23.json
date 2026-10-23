@@ -1,0 +1,22 @@
+{
+  "status": "done",
+  "scope": "Local production routing module; simulated Google 503; one real OpenRouter call; synthetic 120-second audio",
+  "attempts": [
+    {
+      "channel": "google",
+      "model": "test",
+      "ms": 15,
+      "error": "HTTP_503"
+    },
+    {
+      "channel": "openrouter",
+      "model": "google/gemini-3.8-flash",
+      "ms": 8529,
+      "request_id": "gen-1792718845-IDJiJSaO5JDD886Kk5Wr",
+      "cost": 0.00360225
+    }
+  ],
+  "words": 279,
+  "ending_present": true,
+  "transcript": "I think we should check an artificial intelligence answer before using it in a lesson. A fluent answer can sound very confident even when the information is wrong. My first step would be to identify the main claim and ask what evidence would support it. For example, if the answer gives a date or describes a research finding, I would look for the original source. I would check whether the source really exists and whether it actually says what the answer claims. I would also compare the answer with another trustworthy source. Two websites repeating the same sentence do not necessarily provide two independent pieces of evidence. They might both be copying an earlier mistake. Another important step is to consider the context. An explanation that works for one group of learners may not work for a different age group or language background. The teacher needs to decide whether the examples fit the students and whether the task supports the intended learning goal. I would not ask the system to make that final decision for me. Instead, I would use its draft as a starting point and revise it using my knowledge of the class. If I could not verify an important claim, I would mark it as uncertain or leave it out. In the classroom I would invite students to compare a reliable answer with a misleading answer and explain their reasons. This makes checking information an activity that students can practice. My main conclusion is that artificial intelligence can help us prepare and explore ideas, but responsibility for the lesson remains with the teacher. This is the end of student number one. The final word is pineapple."
+}
