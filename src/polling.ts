@@ -43,7 +43,11 @@ export function startVisiblePolling(
 }
 
 export function studentPollDelay(state: any): number {
-  if (state?.responses?.some((r: any) => r.status === "processing"))
+  if (
+    state?.responses?.some((r: any) =>
+      ["queued", "processing"].includes(r.status),
+    )
+  )
     return 3000;
   // Keep a slow check after class ends so a reopened class can still be detected.
   if (state?.class?.status === "ended") return 30000;

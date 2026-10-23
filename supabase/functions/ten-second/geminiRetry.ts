@@ -6,6 +6,9 @@ export async function geminiWithRetry(
     sleep?: (ms: number) => Promise<void>;
     random?: () => number;
     now?: () => number;
+    attemptTimeoutMs?: number;
+    budgetMs?: number;
+    attempts?: number;
   } = {},
 ): Promise<Response> {
   const sleep =
@@ -13,20 +16,23 @@ export async function geminiWithRetry(
     ((ms) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const random = options.random ?? Math.random;
   const now = options.now ?? Date.now;
-  const deadline = now() + 70000;
+  const deadline = now() + (options.budgetMs ?? 70000);
+  const attempts = options.attempts ?? 3;
   let lastError: unknown = new Error("AI unavailable");
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < attempts; attempt++) {
     const remaining = deadline - now();
     if (remaining <= 0) throw lastError;
     let response: Response;
     try {
       response = await request(
         models[attempt % models.length],
-        AbortSignal.timeout(Math.min(20000, remaining)),
+        AbortSignal.timeout(
+          Math.min(options.attemptTimeoutMs ?? 20000, remaining),
+        ),
       );
     } catch (error) {
       lastError = error;
-      if (attempt === 2) throw error;
+      if (attempt === attempts - 1) throw error;
       await sleep(
         Math.min(
           1000 * 2 ** attempt + random() * 1000,
@@ -38,7 +44,7 @@ export async function geminiWithRetry(
     if (
       response.ok ||
       ![404, 408, 429, 500, 502, 503, 504].includes(response.status) ||
-      attempt === 2
+      attempt === attempts - 1
     )
       return response;
     const retryAfter = response.headers.get("retry-after");

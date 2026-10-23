@@ -1,3 +1,8 @@
+import {
+  saveRecording,
+  loadRecording,
+  deleteRecording,
+} from "./recordingStore";
 import { startVisiblePolling, studentPollDelay } from "./polling";
 import { retryConcurrent } from "./concurrency";
 import React, { useState, useEffect, useRef } from "react";
@@ -38,6 +43,7 @@ const labels: Record<string, string> = {
   ended: "Ended",
   closed: "Closed",
   recording: "Not submitted",
+  queued: "Saved · queued",
   processing: "Assessing",
   done: "Complete",
   failed: "Retry needed",
@@ -53,6 +59,7 @@ const labelsZh: Record<string, string> = {
   ended: "已結束",
   closed: "已收題",
   recording: "尚未提交",
+  queued: "已保存・排隊中",
   processing: "評分中",
   done: "已完成",
   failed: "需要重試",
@@ -145,8 +152,8 @@ function App() {
       <footer>
         {tx(
           lang,
-          "Up to 10 seconds · AI gives a first pass; teachers can review the audio",
-          "每次最多 10 秒 · AI 提供初步回饋，老師可聽錄音覆核",
+          "10 seconds or 2 minutes · AI gives a first pass; teachers can review the audio",
+          "10 秒或 2 分鐘 · AI 提供初步回饋，老師可聽錄音覆核",
         )}
       </footer>
     </>
@@ -172,6 +179,7 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
   const [mode, setMode] = useState("answer");
   const [responseLanguage, setResponseLanguage] = useState("auto");
   const [feedbackEnabled, setFeedbackEnabled] = useState(true);
+  const [maxSeconds, setMaxSeconds] = useState(10);
   const [editing, setEditing] = useState<string | null>(null);
   const [selected, setSelected] = useState("");
   const [audio, setAudio] = useState("");
@@ -222,6 +230,17 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
     d.questions.find((q: any) => q.id === selected) ||
     d.questions.find((q: any) => q.status === "active") ||
     d.questions.at(-1);
+  const canRetry = (r: any) => {
+    if (!r?.path) return false;
+    if (r.status === "failed" || r.status === "queued") return true;
+    const long =
+      d.questions.find((q: any) => q.id === r.question_id)?.max_seconds === 120;
+    return (
+      r.status === "processing" &&
+      Date.now() - Date.parse((long && r.worker_claimed_at) || r.submitted_at) >
+        (long ? 180000 : 90000)
+    );
+  };
   const responses = d.responses.filter(
     (r: any) => r.question_id === question?.id,
   );
@@ -445,8 +464,8 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
                 </span>
                 <h1>{cls.title}</h1>
                 <p>
-                  {t("10-second recording limit", "錄音上限 10 秒")} ·{" "}
-                  {d.members.length} {t("joined", "人已加入")}
+                  {t("Recording limit set per question", "各題可設定錄音上限")}{" "}
+                  · {d.members.length} {t("joined", "人已加入")}
                 </p>
               </div>
               <div className="actions">
@@ -581,7 +600,8 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
                             {q.mode === "answer"
                               ? t("Concept response", "概念作答")
                               : t("Pronunciation", "朗讀發音")}{" "}
-                            · {statusLabel(q.status, lang)}
+                            · {q.max_seconds || 10}s ·{" "}
+                            {statusLabel(q.status, lang)}
                           </small>
                           <strong>{q.prompt}</strong>
                         </span>
@@ -593,6 +613,7 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
                             onClick={() => {
                               setEditing(q.id);
                               setMode(q.mode);
+                              setMaxSeconds(q.max_seconds || 10);
                               setPrompt(q.prompt);
                               setRubric(q.rubric);
                               setResponseLanguage(
@@ -651,6 +672,7 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
                         rubric,
                         responseLanguage,
                         feedbackEnabled,
+                        maxSeconds,
                         position: editing
                           ? d.questions.find((q: any) => q.id === editing)
                               ?.position
@@ -661,6 +683,7 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
                       setEditing(null);
                       setResponseLanguage("auto");
                       setFeedbackEnabled(true);
+                      setMaxSeconds(10);
                       await refresh();
                     });
                   }}
@@ -670,6 +693,21 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
                       ? t("Edit question", "編輯題目")
                       : t("＋ Add question", "＋ 新增題目")}
                   </h3>
+                  <label>
+                    {t("Recording limit", "錄音上限")}
+                    <select
+                      value={maxSeconds}
+                      onChange={(e) => setMaxSeconds(Number(e.target.value))}
+                    >
+                      <option value={10}>{t("10 seconds", "10 秒")}</option>
+                      <option value={120} disabled={d.members.length > 15}>
+                        {t(
+                          "2 minutes · up to 15 students",
+                          "2 分鐘・最多 15 人",
+                        )}
+                      </option>
+                    </select>
+                  </label>
                   <div className="segmented">
                     <button
                       type="button"
@@ -895,27 +933,11 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
               <div className="actions filters">
                 <button
                   className="secondary"
-                  disabled={
-                    busy ||
-                    !d.responses.some(
-                      (r: any) =>
-                        r.path &&
-                        (r.status === "failed" ||
-                          (r.status === "processing" &&
-                            Date.now() - Date.parse(r.submitted_at) > 90000)),
-                    )
-                  }
+                  disabled={busy || !d.responses.some(canRetry)}
                   onClick={() =>
                     run(async () => {
                       const failed = await retryConcurrent(
-                        d.responses.filter(
-                          (r: any) =>
-                            r.path &&
-                            (r.status === "failed" ||
-                              (r.status === "processing" &&
-                                Date.now() - Date.parse(r.submitted_at) >
-                                  90000)),
-                        ),
+                        d.responses.filter(canRetry),
                         (r: any) => call("retry", { id: r.id }),
                       );
                       await refresh();
@@ -947,8 +969,8 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
               </div>
               <p className="muted">
                 {t(
-                  "Process unfinished responses retries saved recordings that failed or have been processing for over 90 seconds. Completed responses are kept; students do not need to record again.",
-                  "補處理會重試已保存但失敗、或處理超過 90 秒的錄音；已完成的結果保留，學生不用重錄。",
+                  "Retry unfinished recordings resumes the queue and retries failed or stalled work (90 seconds for short answers; 3 minutes after processing starts for two-minute answers). Completed responses are kept; students do not need to record again.",
+                  "補處理可恢復排隊及重試失敗錄音；短答處理逾 90 秒、兩分鐘回答開始處理後逾 3 分鐘才可重試。已完成的結果保留，學生不用重錄。",
                 )}
               </p>
               <p className="muted">
@@ -1043,10 +1065,7 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
                                   {t("Play", "播放")}
                                 </button>
                               )}
-                              {(r?.status === "failed" ||
-                                (r?.status === "processing" &&
-                                  Date.now() - Date.parse(r.submitted_at) >
-                                    90000)) && (
+                              {canRetry(r) && (
                                 <button
                                   className="quiet"
                                   disabled={busy}
@@ -1201,8 +1220,8 @@ function Student({ code, lang }: { code: string; lang: "en" | "zh" }) {
           <p className="muted">
             {state?.member.name}
             {t(
-              ", you have up to 10 seconds to speak.",
-              "，每次最多 10 秒，說出你的想法。",
+              `, you have up to ${q?.max_seconds || 10} seconds to speak.`,
+              `，本題最多 ${q?.max_seconds || 10} 秒，說出你的想法。`,
             )}
           </p>
           {q ? (
@@ -1272,10 +1291,15 @@ function Student({ code, lang }: { code: string; lang: "en" | "zh" }) {
                     {r.result?.feedback ||
                       (r.result?.transcript
                         ? t("Transcript received.", "已收到逐字稿。")
-                        : t(
-                            "Recording received; assessment in progress.",
-                            "已收到錄音，正在評分。",
-                          ))}
+                        : r.status === "queued"
+                          ? t(
+                              "Recording saved; waiting for AI processing.",
+                              "錄音已保存，正在排隊等候處理。",
+                            )
+                          : t(
+                              "Recording received; assessment in progress.",
+                              "已收到錄音，正在評分。",
+                            ))}
                   </p>
                 </article>
               ))}
@@ -1306,11 +1330,31 @@ function Recorder({
   const [phase, setPhase] = useState(() =>
     savedRecording(q.id) ? "retry" : "idle",
   );
-  const [left, setLeft] = useState(10);
+  const limit = q.max_seconds === 120 ? 120 : 10;
+  const [left, setLeft] = useState(limit);
   const [error, setError] = useState("");
-  const [pending, setPending] = useState<string | null>(() =>
-    savedRecording(q.id),
+  const [pending, setPending] = useState<string | Blob | null>(() =>
+    savedRecording(q.id) === "idb" ? null : savedRecording(q.id),
   );
+  useEffect(() => {
+    if (limit !== 120) return;
+    let cancelled = false;
+    setPhase("restoring");
+    loadRecording(q.id)
+      .then((blob) => {
+        if (cancelled) return;
+        if (blob) {
+          setPending(blob);
+          setPhase("retry");
+        } else setPhase("idle");
+      })
+      .catch(() => {
+        if (!cancelled) setPhase("idle");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [q.id]);
   const recorder = useRef<MediaRecorder | null>(null);
   const stream = useRef<MediaStream | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -1324,10 +1368,34 @@ function Recorder({
       stream.current?.getTracks().forEach((t) => t.stop());
     };
   }, []);
-  async function upload(audio: string) {
+  async function upload(audio: string | Blob) {
     setPhase("sending");
     try {
-      await call("submit", { questionId: q.id, audio });
+      if (audio instanceof Blob) {
+        const ticket = await call("upload_ticket", { questionId: q.id });
+        if (!ticket.received) {
+          if (!ticket.uploaded) {
+            const uploaded = await fetch(ticket.signedUrl, {
+              method: "PUT",
+              headers: { "Content-Type": "audio/wav" },
+              body: audio,
+              signal: AbortSignal.timeout(60000),
+            });
+            if (
+              !uploaded.ok &&
+              uploaded.status !== 409 &&
+              uploaded.status !== 400
+            )
+              throw Error(
+                "錄音上傳未完成，請按重新上傳 / Upload failed; please retry.",
+              );
+          }
+          // A lost first acknowledgement can leave an immutable file already
+          // stored. Confirmation validates that file, never overwrites it.
+          await call("submit_saved", { questionId: q.id });
+        }
+        await deleteRecording(q.id).catch(() => {});
+      } else await call("submit", { questionId: q.id, audio });
       setPhase("sent");
       setPending(null);
       try {
@@ -1388,8 +1456,22 @@ function Recorder({
         try {
           const wav = await recordingToWav(
             new Blob(chunks, { type: rec.mimeType }),
+            limit,
           );
           if (wav.size < 8044) throw Error("Please say at least one sentence.");
+          if (limit === 120) {
+            setPending(wav);
+            try {
+              await saveRecording(q.id, wav);
+              sessionStorage.setItem(pendingKey(q.id), "idb");
+            } catch {
+              setError(
+                "暫存未完成，請保持本頁開啟直到上傳成功。 / Keep this page open until upload succeeds.",
+              );
+            }
+            await upload(wav);
+            return;
+          }
           const bytes = new Uint8Array(await wav.arrayBuffer());
           let bin = "";
           for (const b of bytes) bin += String.fromCharCode(b);
@@ -1413,7 +1495,7 @@ function Recorder({
       setPhase("recording");
       const at = performance.now();
       timer.current = setInterval(() => {
-        const rest = Math.max(0, 10 - (performance.now() - at) / 1000);
+        const rest = Math.max(0, limit - (performance.now() - at) / 1000);
         setLeft(rest);
         if (rest === 0 && rec.state === "recording") rec.stop();
       }, 50);
@@ -1431,7 +1513,7 @@ function Recorder({
         {q.mode === "answer"
           ? t("Concept response", "概念作答")
           : t("Pronunciation", "朗讀發音")}{" "}
-        · {t("up to 10 seconds", "最多 10 秒")}
+        · {t(`up to ${limit} seconds`, `最多 ${limit} 秒`)}
       </span>
       <h2>{q.prompt}</h2>
       {submitted ? (
@@ -1480,8 +1562,9 @@ function Recorder({
           {phase === "retry" && (
             <button
               className="quiet"
-              onClick={() => {
+              onClick={async () => {
                 if (confirm("Discard this recording and continue?")) {
+                  await deleteRecording(q.id).catch(() => {});
                   sessionStorage.removeItem(pendingKey(q.id));
                   setPending(null);
                   setPhase("idle");
@@ -1495,8 +1578,8 @@ function Recorder({
           )}
           <p className="muted">
             {t(
-              "The countdown starts when you press the button. It submits automatically at 10 seconds.",
-              "按下後開始倒數，10 秒到自動送出。",
+              `The countdown starts when you press the button. It submits automatically at ${limit} seconds.`,
+              `按下後開始倒數，${limit} 秒到自動送出。`,
             )}
           </p>
         </>

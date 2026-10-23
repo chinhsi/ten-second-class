@@ -1,3 +1,9 @@
+import {
+  recordingSeconds,
+  validateWav,
+  LONG_RETRY_MS,
+} from "./recordingLimits.ts";
+import { longQueue } from "./longQueue.ts";
 import { geminiWithRetry } from "./geminiRetry.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.110.8";
 import { generateSummary } from "./summary.ts";
@@ -95,7 +101,8 @@ async function assess(
       Deno.env.get("GEMINI_REALTIME_MODEL") ||
       "gemini-3.7-flash";
     let binary = "";
-    for (const b of bytes) binary += String.fromCharCode(b);
+    for (let i = 0; i < bytes.length; i += 32768)
+      binary += String.fromCharCode(...bytes.subarray(i, i + 32768));
     const r = await geminiWithRetry(
       [
         ...new Set([
@@ -181,6 +188,9 @@ async function assess(
             }),
           },
         ),
+      recordingSeconds(q) === 120
+        ? { attemptTimeoutMs: 45000, budgetMs: 100000, attempts: 2 }
+        : {},
     );
     if (!r.ok) {
       const err = await r.json().catch(() => ({}));
@@ -262,6 +272,7 @@ async function assess(
       .eq("submitted_at", submittedAt);
   }
 }
+const queue = longQueue(db, assess);
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers });
   if (req.method !== "POST") return reply({ error: "僅接受 POST" }, 405);
@@ -272,6 +283,15 @@ Deno.serve(async (req) => {
     if (text.length > 500000) return reply({ error: "錄音過大" }, 413);
     const b = JSON.parse(text),
       action = b.action;
+    if (action === "process_long") {
+      if (
+        req.headers.get("authorization") !==
+        `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`
+      )
+        return reply({ error: "Unauthorized" }, 401);
+      EdgeRuntime.waitUntil(queue.run(str(b.id, 40), str(b.workerToken, 40)));
+      return reply({ ok: true });
+    }
     const owner =
       typeof b.owner === "string" &&
       !!Deno.env.get("INTERACT_OWNER_KEY") &&
@@ -409,7 +429,7 @@ Deno.serve(async (req) => {
               "question_id",
               qs.map((q) => q.id),
             )
-            .eq("status", "processing"),
+            .in("status", ["queued", "processing"]),
         );
         if (pending.length)
           throw Error("課堂已結束，仍有錄音在評分；請待評分完成後再刪除。");
@@ -471,6 +491,7 @@ Deno.serve(async (req) => {
           : "auto",
         feedback_enabled:
           b.mode === "answer" ? b.feedbackEnabled !== false : true,
+        max_seconds: b.maxSeconds === 120 ? 120 : 10,
         position: Number(b.position) || 0,
       };
       if (b.id) {
@@ -698,6 +719,48 @@ Deno.serve(async (req) => {
               .createSignedUrl(r.path, 120),
           ),
         );
+      const retryQuestion = check(
+        await db
+          .from("ts_questions")
+          .select("*")
+          .eq("id", r.question_id)
+          .single(),
+      );
+      if (recordingSeconds(retryQuestion) === 120) {
+        if (r.status === "queued") {
+          EdgeRuntime.waitUntil(queue.wake());
+          return reply({ ok: true });
+        }
+        if (
+          r.status !== "failed" &&
+          !(
+            r.status === "processing" &&
+            Date.now() - Date.parse(r.worker_claimed_at || r.submitted_at) >
+              LONG_RETRY_MS
+          )
+        )
+          throw Error("目前仍在處理，請稍候");
+        const claimed = check(
+          await db
+            .from("ts_responses")
+            .update({
+              status: "queued",
+              submitted_at: new Date().toISOString(),
+              worker_token: null,
+              worker_claimed_at: null,
+              worker_started_at: null,
+              result: null,
+              debug_error: null,
+            })
+            .eq("id", r.id)
+            .eq("status", r.status)
+            .eq("submitted_at", r.submitted_at)
+            .select(),
+        );
+        if (!claimed.length) throw Error("已在重試");
+        EdgeRuntime.waitUntil(queue.wake());
+        return reply({ ok: true });
+      }
       if (
         r.status !== "failed" &&
         !(
@@ -798,7 +861,7 @@ Deno.serve(async (req) => {
         await db
           .from("ts_questions")
           .select(
-            "id,mode,prompt,status,position,response_language,feedback_enabled",
+            "id,mode,prompt,status,position,response_language,feedback_enabled,max_seconds",
           )
           .eq("class_id", cls.id)
           .neq("status", "draft")
@@ -808,7 +871,9 @@ Deno.serve(async (req) => {
       const responses = check(
         await db
           .from("ts_responses")
-          .select("id,question_id,status,result,started_at,submitted_at")
+          .select(
+            "id,question_id,status,result,started_at,submitted_at,worker_claimed_at",
+          )
           .eq("member_id", member.id),
       );
       return reply({
@@ -869,7 +934,72 @@ Deno.serve(async (req) => {
         ),
       );
     }
+    if (action === "upload_ticket" || action === "submit_saved") {
+      if (recordingSeconds(q) !== 120) throw Error("本題不使用長錄音上傳");
+      const r = check(
+        await db
+          .from("ts_responses")
+          .select("*")
+          .eq("question_id", q.id)
+          .eq("member_id", member.id)
+          .single(),
+      );
+      if (r.status !== "recording") {
+        if (!r.path) throw Error("錄音已取消");
+        return reply({ ok: true, received: true });
+      }
+      if (Date.now() - Date.parse(r.started_at) > 86400000)
+        throw Error("錄音已超過24小時");
+      const path = `${cls.id}/${q.id}/${member.id}/${r.id}.wav`;
+      if (action === "upload_ticket") {
+        const existing = check(
+          await db.storage
+            .from("ten-second-audio")
+            .list(`${cls.id}/${q.id}/${member.id}`, {
+              search: `${r.id}.wav`,
+              limit: 10,
+            }),
+        );
+        if (existing.some((f: any) => f.name === `${r.id}.wav`))
+          return reply({ uploaded: true });
+        const signed = check(
+          await db.storage.from("ten-second-audio").createSignedUploadUrl(path),
+        );
+        return reply({ signedUrl: signed.signedUrl });
+      }
+      const file = check(
+        await db.storage.from("ten-second-audio").download(path),
+      );
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      try {
+        validateWav(bytes, 120);
+      } catch (e) {
+        await db.storage.from("ten-second-audio").remove([path]);
+        throw e;
+      }
+      const accepted = check(
+        await db
+          .from("ts_responses")
+          .update({
+            status: "queued",
+            path,
+            submitted_at: new Date().toISOString(),
+          })
+          .eq("id", r.id)
+          .eq("status", "recording")
+          .select(),
+      );
+      if (accepted.length) EdgeRuntime.waitUntil(queue.wake());
+      else {
+        const current = check(
+          await db.from("ts_responses").select("path").eq("id", r.id).single(),
+        );
+        if (!current.path) throw Error("錄音已取消，尚未收到");
+      }
+      return reply({ ok: true, received: true });
+    }
     if (action === "submit") {
+      if (recordingSeconds(q) === 120) throw Error("請使用長錄音上傳");
       const r = check(
         await db
           .from("ts_responses")

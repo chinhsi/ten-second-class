@@ -27,7 +27,9 @@ export function responseStats(responses: ResponseRow[], total: number) {
     total,
     submitted: submitted.length,
     missing: Math.max(0, total - submitted.length),
-    processing: submitted.filter((r) => r.status === "processing").length,
+    processing: submitted.filter((r) =>
+      ["queued", "processing"].includes(r.status),
+    ).length,
     failed: submitted.filter((r) => r.status === "failed").length,
     unscorable: done.filter((r) => r.result?.level === "unscorable").length,
     transcribed: done.filter((r) => r.result?.level === "transcribed").length,

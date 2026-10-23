@@ -136,3 +136,25 @@ Edge Function 使用 Supabase 的服務端金鑰、`INTERACT_OWNER_KEY` 和 `GEM
 - 字越大代表相關回答越多；人數由有效回答 ID 去重計算，不採用 AI 自報數字。點概念可核對匿名原話；投影只顯示題目、概念與說明。
 - 有新回答或舊版摘要時先更新歸納，不退回原始詞頻圖。AI 歸納仍需老師覆核，相關回答數不表示贊同或正確。
 - 驗證：`node --experimental-strip-types scripts/test-word-cloud.mjs`、`node --experimental-strip-types scripts/test-discussion.mjs` 及 `npm test`。瀏覽器測試使用模擬的摘要，驗證共用請求、證據、投影與手機版；不等同真實模型的歸納品質測試。
+
+
+## 最多兩分鐘的小班回答（2026-10-23）
+
+老師新增題目時可選「10 秒」或「2 分鐘・最多 15 人」。既有題目仍為10秒。課堂一旦有兩分鐘題目，最多15位學生；已超過15人的課堂不能新增兩分鐘題目。學生可提早送出，或到上限自動送出。
+
+兩分鐘錄音以二進位暫存在瀏覽器IndexedDB（可存較大檔案的本機資料庫），再直接上傳私有音檔儲存空間。重新整理原頁後可重傳未完成的錄音；請勿清除瀏覽器資料。上傳成功後才開始AI處理，排隊狀態不代表失敗。這不保證關閉網頁前尚在錄製的聲音能恢復。
+
+長錄音全專案最多4份同時交AI，其餘排隊。每次AI請求最多45秒、最多2次，重試預算100秒；3分鐘的工作保留時間到期後，老師可按「補處理未完成作答」。按鍵也可喚醒未啟動的排隊工作；已完成的結果不重跑。沒有常駐定時救援，背景工作意外中斷仍須老師按鍵。十秒題目沿用原有20秒／3次處理。
+
+部署順序：先執行 `supabase/migrations/202610230001_two_minute_recordings.sql`，再部署ten-second函式，最後發布前端。新安裝先按原順序執行schema.sql、teachers.sql、discussion.sql，再執行此migration；重建schema後亦須重跑migration。只授權service_role，不向學生開放資料表。
+
+可重現驗證：
+- `node --experimental-strip-types scripts/test-long-recordings.mjs`：120秒音檔完整性、超長拒收、十秒相容、重試上限，無AI費用。
+- `python3 scripts/two-minute-trial.py validate`：資料庫交易內驗證15份排隊、4工上限及第16人拒收，最後回滾。
+- `python3 scripts/two-minute-trial.py silence`：隔離測試課堂的15份兩分鐘靜音上傳／排隊，無AI呼叫，測後清理。
+- `python3 scripts/two-minute-trial.py generate`：本機產生15份合成語音。
+- `python3 scripts/two-minute-trial.py live`：**會使用既有Gemini額度，需當次授權**；一批15份，每份最多2次。已有本次報告時拒絕自動重跑。
+
+測試報告在reviews/two-minute-*-2026-10-23.json。合成音檔留在本機暫存目錄，不使用學生個人錄音。Chrome啟動曾崩潰，本輪已停止再次啟動Chrome；後續以無瀏覽器測試驗證，不能將API測試當作15支真實手機的現場驗收。
+
+2026-10-23實測結果：15份120秒英文合成語音，先同時上傳，再同時確認提交，逐份排隊做真實Gemini轉錄；全部完成、零失敗，從開始上傳到最後一次確認全部完成約64.94秒（每8秒查一次，因此非精確完成時刻）。每份3840044 bytes、逐字稿均包含末尾pineapple；觀察到最多4工。此為只轉錄測試，未驗證評分品質、中粵語、15支手機或課室Wi-Fi；首次結果觀察在48.5秒，不代表第一份一定到此時才完成。測試課堂、音檔及臨時老師已清除，未重跑付費測試。

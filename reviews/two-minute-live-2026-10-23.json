@@ -1,0 +1,258 @@
+{
+  "started_at": "2026-10-23T00:03:45.983580+00:00",
+  "mode": "synthetic speech with Gemini",
+  "class_id": "5b4cf020-53a6-4cd0-bbd7-5e8f8303b87c",
+  "question_id": "381332ee-2115-4010-9105-1cde5a16e5e1",
+  "students": 15,
+  "seconds_each": 120,
+  "status": "complete",
+  "samples": [
+    {
+      "elapsed_seconds": 48.5,
+      "queued": 4,
+      "processing": 4,
+      "done": 7,
+      "failed": 0
+    },
+    {
+      "elapsed_seconds": 56.73,
+      "queued": 0,
+      "processing": 1,
+      "done": 14,
+      "failed": 0
+    },
+    {
+      "elapsed_seconds": 64.94,
+      "queued": 0,
+      "processing": 0,
+      "done": 15,
+      "failed": 0
+    }
+  ],
+  "uploads": [
+    {
+      "index": 1,
+      "response_id": "882cc362-ee80-49dd-8df6-c51e95b51fed",
+      "sha256": "b8295b81596339ff90f696fe85ada91d149a37eeb3336e6c21c975a74e72e12b",
+      "upload_seconds": 10.53
+    },
+    {
+      "index": 2,
+      "response_id": "072c605d-9b72-4951-a531-3d1466b11a44",
+      "sha256": "5b7be59e3542bcdf3f386e4d5d9cba4c69180f9a09f76f1f29c115abe9bb5d27",
+      "upload_seconds": 16.51
+    },
+    {
+      "index": 3,
+      "response_id": "7e5b91c2-d972-43dd-8bd7-0f552b7737ad",
+      "sha256": "e721cb15fe5d27624bbeb9bdca272f93c5f95037e03e0e659c4650d7c7a94d64",
+      "upload_seconds": 13.94
+    },
+    {
+      "index": 4,
+      "response_id": "b98cde20-ab4b-4c12-bfd5-3a91787c185f",
+      "sha256": "7e807b304de81ba7e308c8009f26dca8746a341ce49557369208afd5d03d855c",
+      "upload_seconds": 17.19
+    },
+    {
+      "index": 5,
+      "response_id": "0e948dcb-67c2-43bf-b58e-1e9dfd301657",
+      "sha256": "9cae4d78d87604b8e7d0449407bee340c9e1ade1b8ba5b834ae53d324646e501",
+      "upload_seconds": 3.42
+    },
+    {
+      "index": 6,
+      "response_id": "5dd3fea7-abd3-41c3-bcfd-331d1dba1c54",
+      "sha256": "2c0dafda4da29cc21432491a86abcd5285c9e0c2a234d76c59f9db864678afb2",
+      "upload_seconds": 8.47
+    },
+    {
+      "index": 7,
+      "response_id": "3e294e75-f6a6-4e48-99ad-670f4ae45937",
+      "sha256": "04cffb2221981578ebc79208575d079c81ca2dbba658451c203deccade77911f",
+      "upload_seconds": 11.02
+    },
+    {
+      "index": 8,
+      "response_id": "7f490281-44a5-4310-83df-0c2405a4ebed",
+      "sha256": "2301a39983a0752824c8a85ea7e39aaa2e09895cd931a4c0149a03859fd08652",
+      "upload_seconds": 29.66
+    },
+    {
+      "index": 9,
+      "response_id": "25ba0f9f-ec44-40d4-a38a-899799fbe789",
+      "sha256": "12af8eac90c7467f84c5a2117d6caeef414a792a2602afa031806cbec3817a5f",
+      "upload_seconds": 8.29
+    },
+    {
+      "index": 10,
+      "response_id": "3c9c1fd2-a836-4f61-9899-6271cd2f3440",
+      "sha256": "7b49cac7ae1bb49489ca85fe0561e0b6a77732ae604774cdcbbf28cd92be3d01",
+      "upload_seconds": 30.25
+    },
+    {
+      "index": 11,
+      "response_id": "b4b201ca-5ec4-4b5a-ba03-34b85e449262",
+      "sha256": "73a8ec7b8de05c880ef110a6f8ba0196132310aaae2ae4f5242d64cdc44f8201",
+      "upload_seconds": 10.26
+    },
+    {
+      "index": 12,
+      "response_id": "a797db97-fbe4-43e4-a59b-dae92c7e4843",
+      "sha256": "397e85242b10f419fdae9332a57d2e647a7bff1a8805d3f34c547b42733d1dc2",
+      "upload_seconds": 17.83
+    },
+    {
+      "index": 13,
+      "response_id": "3a8a2d3f-eadf-41ce-9e50-78217a92b848",
+      "sha256": "0be1a9f2409bf235480de6c946ca0fad0d3c0415725ac8ce11bd3e31ae453d94",
+      "upload_seconds": 25.54
+    },
+    {
+      "index": 14,
+      "response_id": "4456d1c5-9620-44b6-8c2e-13e3b5c6b7d1",
+      "sha256": "fa99947177becd02f2006f8b24cce07c46431094ef4d3a51b7bff2dff94a3d09",
+      "upload_seconds": 28.79
+    },
+    {
+      "index": 15,
+      "response_id": "426f71d6-7344-41f2-9097-08550a05e038",
+      "sha256": "186e5f7691620ffe2f25930398d9708657f6d33b395627c3d18528dc0b2d201c",
+      "upload_seconds": 11.15
+    }
+  ],
+  "all_submitted_seconds": 48.22,
+  "peak_processing_observed": 4,
+  "results": [
+    {
+      "id": "4456d1c5-9620-44b6-8c2e-13e3b5c6b7d1",
+      "status": "done",
+      "completed_observed_seconds": 48.5,
+      "transcript_words": 279,
+      "ending_present": true,
+      "error": null
+    },
+    {
+      "id": "426f71d6-7344-41f2-9097-08550a05e038",
+      "status": "done",
+      "completed_observed_seconds": 56.73,
+      "transcript_words": 279,
+      "ending_present": true,
+      "error": null
+    },
+    {
+      "id": "882cc362-ee80-49dd-8df6-c51e95b51fed",
+      "status": "done",
+      "completed_observed_seconds": 56.73,
+      "transcript_words": 279,
+      "ending_present": true,
+      "error": null
+    },
+    {
+      "id": "b98cde20-ab4b-4c12-bfd5-3a91787c185f",
+      "status": "done",
+      "completed_observed_seconds": 56.73,
+      "transcript_words": 279,
+      "ending_present": true,
+      "error": null
+    },
+    {
+      "id": "7f490281-44a5-4310-83df-0c2405a4ebed",
+      "status": "done",
+      "completed_observed_seconds": 48.5,
+      "transcript_words": 279,
+      "ending_present": true,
+      "error": null
+    },
+    {
+      "id": "0e948dcb-67c2-43bf-b58e-1e9dfd301657",
+      "status": "done",
+      "completed_observed_seconds": 48.5,
+      "transcript_words": 279,
+      "ending_present": true,
+      "error": null
+    },
+    {
+      "id": "3e294e75-f6a6-4e48-99ad-670f4ae45937",
+      "status": "done",
+      "completed_observed_seconds": 64.94,
+      "transcript_words": 279,
+      "ending_present": true,
+      "error": null
+    },
+    {
+      "id": "3a8a2d3f-eadf-41ce-9e50-78217a92b848",
+      "status": "done",
+      "completed_observed_seconds": 48.5,
+      "transcript_words": 279,
+      "ending_present": true,
+      "error": null
+    },
+    {
+      "id": "5dd3fea7-abd3-41c3-bcfd-331d1dba1c54",
+      "status": "done",
+      "completed_observed_seconds": 56.73,
+      "transcript_words": 279,
+      "ending_present": true,
+      "error": null
+    },
+    {
+      "id": "072c605d-9b72-4951-a531-3d1466b11a44",
+      "status": "done",
+      "completed_observed_seconds": 56.73,
+      "transcript_words": 279,
+      "ending_present": true,
+      "error": null
+    },
+    {
+      "id": "25ba0f9f-ec44-40d4-a38a-899799fbe789",
+      "status": "done",
+      "completed_observed_seconds": 48.5,
+      "transcript_words": 279,
+      "ending_present": true,
+      "error": null
+    },
+    {
+      "id": "a797db97-fbe4-43e4-a59b-dae92c7e4843",
+      "status": "done",
+      "completed_observed_seconds": 56.73,
+      "transcript_words": 279,
+      "ending_present": true,
+      "error": null
+    },
+    {
+      "id": "3c9c1fd2-a836-4f61-9899-6271cd2f3440",
+      "status": "done",
+      "completed_observed_seconds": 48.5,
+      "transcript_words": 279,
+      "ending_present": true,
+      "error": null
+    },
+    {
+      "id": "b4b201ca-5ec4-4b5a-ba03-34b85e449262",
+      "status": "done",
+      "completed_observed_seconds": 48.5,
+      "transcript_words": 279,
+      "ending_present": true,
+      "error": null
+    },
+    {
+      "id": "7e5b91c2-d972-43dd-8bd7-0f552b7737ad",
+      "status": "done",
+      "completed_observed_seconds": 56.73,
+      "transcript_words": 279,
+      "ending_present": true,
+      "error": null
+    }
+  ],
+  "storage": [
+    {
+      "files": 15,
+      "min_bytes": 3840044,
+      "max_bytes": 3840044
+    }
+  ],
+  "passed": true,
+  "finished_at": "2026-10-23T00:04:51.893129+00:00",
+  "cleanup": "test class, audio and temporary teacher removed"
+}
