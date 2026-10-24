@@ -1,0 +1,169 @@
+[
+  {
+    "study_id": "initial",
+    "status": "incomplete",
+    "actual_cost": 0.163464,
+    "request_sha256": "01a79600486d711907ef1d97d91a9063236f252ce99885f05a2b391071d27f1d",
+    "source_files_sha256": {
+      "/Users/chinhsi/ten-second-class/reviews/sonnet-2026-10-24/source.txt": "a7312b71c244b344dea47119a667aae57393ae1b96fea76bdbdebbc3c44a0fd8"
+    },
+    "model": "anthropic/claude-sonnet-5.5",
+    "upper_bound_usd": 0.280132,
+    "prior_spent_usd": 0.0,
+    "budget_usd": 1,
+    "gateway": "autoresearch.task_openrouter",
+    "sent_at": 1792814597.201969,
+    "actual_model": "anthropic/claude-sonnet-5.5",
+    "request_id": "gen-1792814597-2E3fM4PSe9CmcEN3k0hP",
+    "provider": "Anthropic",
+    "finish_reason": "length",
+    "usage": {
+      "prompt_tokens": 31732,
+      "completion_tokens": 10000,
+      "total_tokens": 41732,
+      "cost": 0.163464,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.163464,
+        "upstream_inference_prompt_cost": 0.063464,
+        "upstream_inference_completions_cost": 0.1
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 10000,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "elapsed_seconds": 90.92
+  },
+  {
+    "study_id": "direct",
+    "status": "reconciled_rejected",
+    "actual_cost": 0,
+    "request_sha256": "de876d9ff663238c8696ff4edc38825c02f6e538e13582478f6c5b78ecb56c2c",
+    "source_files_sha256": {
+      "/Users/chinhsi/ten-second-class/reviews/sonnet-2026-10-24/source.txt": "a7312b71c244b344dea47119a667aae57393ae1b96fea76bdbdebbc3c44a0fd8"
+    },
+    "model": "anthropic/claude-sonnet-5.5",
+    "upper_bound_usd": 0.240132,
+    "prior_spent_usd": 0.163464,
+    "budget_usd": 1,
+    "gateway": "autoresearch.task_openrouter",
+    "sent_at": 1792814722.0501912,
+    "error_type": "HTTPError",
+    "elapsed_seconds": 0.56,
+    "billing_evidence": "/Users/chinhsi/ten-second-class/reviews/sonnet-2026-10-24/billing-reconciliation.json"
+  },
+  {
+    "study_id": "low",
+    "status": "incomplete",
+    "actual_cost": 0.223464,
+    "request_sha256": "087f74800dffc9d05c28be13503589bbb9d71f02a1ac71b91172543b72b956a6",
+    "source_files_sha256": {
+      "/Users/chinhsi/ten-second-class/reviews/sonnet-2026-10-24/source.txt": "a7312b71c244b344dea47119a667aae57393ae1b96fea76bdbdebbc3c44a0fd8"
+    },
+    "model": "anthropic/claude-sonnet-5.5",
+    "upper_bound_usd": 0.340132,
+    "prior_spent_usd": 0.163464,
+    "budget_usd": 1,
+    "gateway": "autoresearch.task_openrouter",
+    "sent_at": 1792814831.133823,
+    "actual_model": "anthropic/claude-sonnet-5.5",
+    "request_id": "gen-1792814831-82Q1MFAglN2f5u1Lt0wH",
+    "provider": "Anthropic",
+    "finish_reason": "length",
+    "usage": {
+      "prompt_tokens": 31732,
+      "completion_tokens": 16000,
+      "total_tokens": 47732,
+      "cost": 0.223464,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.223464,
+        "upstream_inference_prompt_cost": 0.063464,
+        "upstream_inference_completions_cost": 0.16
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 13823,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "elapsed_seconds": 139.33
+  },
+  {
+    "study_id": "verification",
+    "status": "completed",
+    "actual_cost": 0.037946,
+    "request_sha256": "e4700b089659c8a06afa35d6618a1785bed3a97812defe1d90ccb62955cff361",
+    "source_files_sha256": {
+      "/Users/chinhsi/ten-second-class/reviews/sonnet-2026-10-24/verification/source.txt": "80eb4c8e81dd892dabf3e749e3ba6baaf0a48a59d08f0a98eacebb7be147ec6d"
+    },
+    "model": "anthropic/claude-sonnet-5.5",
+    "upper_bound_usd": 0.240744,
+    "prior_spent_usd": 0.386928,
+    "budget_usd": 1,
+    "gateway": "autoresearch.task_openrouter",
+    "delivery_plan": {
+      "scope": "Verify only three implemented recording recovery fixes",
+      "max_input_chars": 55000,
+      "expected_answer_tokens": 2200,
+      "reasoning_allowance_tokens": 12000,
+      "capacity_rationale": "Smaller source packet, three bounded questions, concise report; 16384 total within remaining USD1 cap.",
+      "actual_input_chars": 34195,
+      "reservation_guaranteed": false
+    },
+    "recovery": {
+      "previous_request_sha256": "087f74800dffc9d05c28be13503589bbb9d71f02a1ac71b91172543b72b956a6",
+      "previous_request_file": "/Users/chinhsi/ten-second-class/reviews/sonnet-2026-10-24/low/review-request.json",
+      "diagnosis": "Full packet low effort still exhausted total output; partial report had three complete findings.",
+      "changes": "Use current smaller source packet and limit task to three implemented fixes; answer <=900 words; 16384 total.",
+      "why_changes_help": "Reduces breadth and analysis space, retains guards relevant to each claim and explicitly limits report.",
+      "evidence_file": "/Users/chinhsi/ten-second-class/reviews/sonnet-2026-10-24/recovery-diagnosis.md",
+      "evidence_sha256": "d662ec4d969b9d38ab8e0083b260aa6ddbed135be483dfc2e2db3ffe58d1b737"
+    },
+    "remaining_after_reservation_usd": 0.372328,
+    "sent_at": 1792815221.016801,
+    "actual_model": "anthropic/claude-sonnet-5.5",
+    "request_id": "gen-1792815221-dtAFxCcCmnZdpTsQ1uuI",
+    "provider": "Anthropic",
+    "finish_reason": "stop",
+    "usage": {
+      "prompt_tokens": 13023,
+      "completion_tokens": 1190,
+      "total_tokens": 14213,
+      "cost": 0.037946,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.037946,
+        "upstream_inference_prompt_cost": 0.026046,
+        "upstream_inference_completions_cost": 0.0119
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 0,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "delivery_status": "awaiting_content_review",
+    "elapsed_seconds": 11.7
+  }
+]

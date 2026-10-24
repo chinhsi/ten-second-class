@@ -1,3 +1,4 @@
+import { audioDigest } from "./audioDigest";
 import { selectRecordingQuestion } from "./recordingSelection";
 import {
   saveRecording,
@@ -1248,6 +1249,7 @@ function Student({ code, lang }: { code: string; lang: "en" | "zh" }) {
                 (r: any) => r.question_id === q.id,
               )}
               onRecording={() => setRecordingQuestion(q)}
+              onCaptureFailed={() => setRecordingQuestion(null)}
               onDiscard={async () => {
                 await refresh();
                 setRecordingQuestion(null);
@@ -1333,6 +1335,7 @@ function Recorder({
   onSubmitted,
   onRecording,
   onDiscard,
+  onCaptureFailed,
 }: {
   q: any;
   scope: string;
@@ -1342,6 +1345,7 @@ function Recorder({
   onSubmitted: () => Promise<void>;
   onRecording: () => void;
   onDiscard: () => Promise<void>;
+  onCaptureFailed: () => void;
 }) {
   const t = (en: string, zh: string) => tx(lang, en, zh);
   const [phase, setPhase] = useState(() =>
@@ -1397,7 +1401,9 @@ function Recorder({
       if (typeof audio !== "string") {
         if (audio.nextVersion)
           throw Error("捨棄尚未確認，請再按捨棄完成確認，不能提交舊錄音。");
+        const digest = audio.digest || (await audioDigest(audio.blob));
         const ticket = await call("upload_ticket", {
+          digest,
           questionId: q.id,
           version: audio.version,
         });
@@ -1421,6 +1427,7 @@ function Recorder({
           // A lost first acknowledgement can leave an immutable file already
           // stored. Confirmation validates that file, never overwrites it.
           await call("submit_saved", {
+            digest,
             questionId: q.id,
             version: audio.version,
           });
@@ -1475,13 +1482,17 @@ function Recorder({
       rec.ondataavailable = (e) => {
         if (e.data.size) chunks.push(e.data);
       };
+      let captureFailed = false;
       rec.onerror = () => {
+        captureFailed = true;
+        onCaptureFailed();
         setError("Recording failed. Please check your microphone.");
         setPhase("idle");
         stream.current?.getTracks().forEach((t) => t.stop());
         if (timer.current) clearInterval(timer.current);
       };
       rec.onstop = async () => {
+        if (captureFailed) return;
         if (timer.current) clearInterval(timer.current);
         stream.current?.getTracks().forEach((t) => t.stop());
         try {
@@ -1493,6 +1504,7 @@ function Recorder({
           if (limit === 120) {
             const saved: SavedRecording = {
               blob: wav,
+              digest: await audioDigest(wav),
               version: ticket.recording_version,
               responseId: ticket.id,
             };
@@ -1523,6 +1535,7 @@ function Recorder({
         } catch (e) {
           setError((e as Error).message);
           setPhase("idle");
+          onCaptureFailed();
         }
       };
       rec.start();
@@ -1538,10 +1551,15 @@ function Recorder({
       stream.current?.getTracks().forEach((t) => t.stop());
       setError((e as Error).message);
       setPhase("idle");
+      onCaptureFailed();
     }
   }
   const submitted =
-    (response && response.status !== "recording") || phase === "sent";
+    (!pending &&
+      !["recording", "sending", "retry", "restoring"].includes(phase) &&
+      response &&
+      response.status !== "recording") ||
+    phase === "sent";
   return (
     <section className="card record-card">
       <span className="pill">

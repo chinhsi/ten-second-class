@@ -315,42 +315,10 @@ Deno.serve(async (req) => {
         }
         return paths;
       }
-      check(
-        await db.from("ts_classes").update({ status: "ended" }).eq("id", id),
-      );
-      const qs = check(
-        await db.from("ts_questions").select("id").eq("class_id", id),
-      );
-      check(
-        await db
-          .from("ts_questions")
-          .update({ status: "closed" })
-          .eq("class_id", id),
-      );
-      if (qs.length) {
-        check(
-          await db
-            .from("ts_responses")
-            .update({ status: "failed" })
-            .in(
-              "question_id",
-              qs.map((q) => q.id),
-            )
-            .eq("status", "recording"),
-        );
-        const pending = check(
-          await db
-            .from("ts_responses")
-            .select("id")
-            .in(
-              "question_id",
-              qs.map((q) => q.id),
-            )
-            .in("status", ["queued", "processing"]),
-        );
-        if (pending.length)
-          throw Error("課堂已結束，仍有錄音在評分；請待評分完成後再刪除。");
-      }
+      const prepared = await db.rpc("ts_prepare_class_delete", { target: id });
+      if (prepared.error?.code === "P0001")
+        throw Error("仍有錄音在處理，未刪除或取消任何錄音；請稍後再試。");
+      check(prepared);
       const paths = await collect(id);
       for (let i = 0; i < paths.length; i += 100)
         check(
@@ -947,14 +915,40 @@ Deno.serve(async (req) => {
         return reply({ discarded: true, version: next });
       }
       if (r.recording_version !== version) return stale();
+      const digest = b.digest;
+      if (
+        digest !== undefined &&
+        (typeof digest !== "string" || !/^[a-f0-9]{64}$/.test(digest))
+      )
+        throw Error("錄音內容識別碼無效");
+      const filename = recordingFile(r.id, version);
+      const path = `${cls.id}/${q.id}/${member.id}/${filename}`;
+      const verifyContent = async (bytes?: Uint8Array) => {
+        if (digest === undefined) return; // rolling deployment / legacy client
+        const data =
+          bytes ||
+          new Uint8Array(
+            await check(
+              await db.storage.from("ten-second-audio").download(path),
+            ).arrayBuffer(),
+          );
+        const hash = Array.from(
+          new Uint8Array(await crypto.subtle.digest("SHA-256", data)),
+        )
+          .map((x) => x.toString(16).padStart(2, "0"))
+          .join("");
+        if (hash !== digest)
+          throw Error(
+            "已收到另一個分頁的不同錄音；這份仍保留在本機，請找老師確認或捨棄這份。 / A different recording was received from another tab. This copy remains on this device.",
+          );
+      };
       if (r.status !== "recording") {
         if (!r.path) throw Error("錄音已取消");
+        await verifyContent();
         return reply({ ok: true, received: true });
       }
       if (Date.now() - Date.parse(r.started_at) > 86400000)
         throw Error("錄音已超過24小時");
-      const filename = recordingFile(r.id, version);
-      const path = `${cls.id}/${q.id}/${member.id}/${filename}`;
       if (action === "upload_ticket") {
         const existing = check(
           await db.storage
@@ -964,8 +958,10 @@ Deno.serve(async (req) => {
               limit: 10,
             }),
         );
-        if (existing.some((f: any) => f.name === filename))
+        if (existing.some((f: any) => f.name === filename)) {
+          await verifyContent();
           return reply({ uploaded: true });
+        }
         const signed = check(
           await db.storage.from("ten-second-audio").createSignedUploadUrl(path),
         );
@@ -975,6 +971,7 @@ Deno.serve(async (req) => {
         await db.storage.from("ten-second-audio").download(path),
       );
       const bytes = new Uint8Array(await file.arrayBuffer());
+      await verifyContent(bytes);
       try {
         validateWav(bytes, 120);
       } catch (e) {

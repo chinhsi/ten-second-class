@@ -23,9 +23,20 @@ await deleteRecording(scope,'old-question',A);
 assert.equal(await (await loadRecording(scope,'old-question',B.version)).blob.text(),'new');
 await deleteRecording(other,'old-question',B);
 assert.equal(await (await loadRecording(scope,'old-question',B.version)).blob.text(),'new');
-assert.equal(selectRecordingQuestion({...state,responses:[{question_id:'old-question',status:'done'}]},null,await pendingRecordings(scope),()=>null).id,'new-question');
+assert.equal(selectRecordingQuestion({...state,responses:[{question_id:'old-question',status:'done'}]},null,await pendingRecordings(scope),()=>null).id,'old-question'); // Pending content needs explicit hash reconciliation even after server receipt.
 await deleteRecording(scope,'old-question',B);assert.deepEqual(await pendingRecordings(scope),[]);
 assert.notEqual(recordingFile('r',A.version),recordingFile('r',B.version));
 assert.equal(recordingFile('r',null),'r.wav');assert.equal(recordingVersion(null),null);
 assert.throws(()=>recordingVersion(undefined));assert.throws(()=>recordingVersion('../path'));
-console.log('PASS: new-tab/closed-question/ended-class recovery; student isolation; persisted discard intent; late old save/delete cannot overwrite B; completed answers excluded; versioned/legacy paths. No browser or AI.');
+console.log('PASS: new-tab/closed-question/ended-class recovery; student isolation; persisted discard intent; late old save/delete cannot overwrite B; pending content reconciled after receipt; versioned/legacy paths. No browser or AI.');
+
+const {audioDigest}=await import('../src/audioDigest.ts');
+const sameVersionA={...A,digest:await audioDigest(A.blob)};
+const sameVersionB={...A,blob:B.blob,digest:await audioDigest(B.blob)};
+assert.notEqual(sameVersionA.digest,sameVersionB.digest);
+await saveRecording(scope,'same-version',sameVersionA);
+await saveRecording(scope,'same-version',sameVersionB);
+await deleteRecording(scope,'same-version',sameVersionA);
+assert.equal(await (await loadRecording(scope,'same-version',A.version)).blob.text(),'new');
+await deleteRecording(scope,'same-version',sameVersionB);
+console.log('PASS: different content in same server version survives another tab deletion.');

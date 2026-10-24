@@ -1,0 +1,32 @@
+{
+  "date_utc": "2026-10-24",
+  "method": "Two read-only key usage_daily snapshots unchanged; sum of all known same-key charges matches exactly, leaving no additional charged amount. Analytics endpoint 403; not per-request generation lookup. No reset of prior cost.",
+  "key_usage_daily": "0.9250645",
+  "known_charges": [
+    {
+      "request_id": "gen-1792800033-VTgYjqg4YhkZgwrofakR",
+      "cost": 0.276692
+    },
+    {
+      "request_id": "gen-1792800109-H3vVMyW1vNHo1JyLr6tc",
+      "cost": 0.26874
+    },
+    {
+      "request_id": "gen-1792802384-O1VUx6NHEPkL8nFk2SRI",
+      "cost": 0.10676
+    },
+    {
+      "request_id": "gen-1792807709-9XTu1vypKVrx1p0qtYJ8",
+      "cost": 0.1055415
+    },
+    {
+      "request_id": "gen-1792814597-2E3fM4PSe9CmcEN3k0hP",
+      "cost": 0.163464
+    },
+    {
+      "request_id": "gen-1792803923-RVDHz6cTKbC1Tt11L8tW",
+      "cost": 0.003867
+    }
+  ],
+  "residual_usd": "0.0000000"
+}

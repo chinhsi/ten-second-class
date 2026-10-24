@@ -1,0 +1,23 @@
+{
+  "baseline": [
+    {
+      "status": "done",
+      "count": 28
+    }
+  ],
+  "checks": [
+    "Busy delete rolls back class/question/cancellation; pending recording remains uploadable",
+    "Discard after successful PUT; lost-ack retry is idempotent",
+    "Same version different content rejected before and after acceptance; matching content retry succeeds",
+    "Old submission rejected; new 2-second file accepted and processed without AI",
+    "Accepted recording protected; duplicate requests do not restart processing"
+  ],
+  "passed": true,
+  "after_cleanup": [
+    {
+      "status": "done",
+      "count": 28
+    }
+  ],
+  "cleanup": "Temporary class/audio/teacher removed; baseline unchanged"
+}

@@ -5,9 +5,16 @@ export type SavedRecording = {
   version: string | null;
   responseId: string;
   nextVersion?: string;
+  digest?: string;
 };
 const key = (scope: string, id: string, value: SavedRecording) =>
-  JSON.stringify([scope, id, value.responseId, value.version]);
+  JSON.stringify([
+    scope,
+    id,
+    value.responseId,
+    value.version,
+    ...(value.digest ? [value.digest] : []),
+  ]);
 const open = () =>
   new Promise<IDBDatabase>((resolve, reject) => {
     const r = indexedDB.open("ten-second-recordings", 1);
@@ -49,7 +56,10 @@ export async function loadRecording(
     try {
       const p = JSON.parse(String(k));
       return (
-        Array.isArray(p) && p.length === 4 && p[0] === scope && p[1] === id
+        Array.isArray(p) &&
+        (p.length === 4 || p.length === 5) &&
+        p[0] === scope &&
+        p[1] === id
       );
     } catch {
       return false;
@@ -68,7 +78,7 @@ export async function pendingRecordings(scope: string): Promise<string[]> {
     try {
       const pair = JSON.parse(String(k));
       return Array.isArray(pair) &&
-        pair.length === 4 &&
+        (pair.length === 4 || pair.length === 5) &&
         pair[0] === scope &&
         typeof pair[1] === "string"
         ? [pair[1]]

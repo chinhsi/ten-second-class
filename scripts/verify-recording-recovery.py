@@ -7,12 +7,23 @@ c=importlib.util.module_from_spec(spec);spec.loader.exec_module(c)
 m=c.m
 def main():
  rest=c.setup()
+ if '--cleanup-sonnet' in sys.argv:
+  teachers=rest('ts_teachers',query='display_name=eq.Temporary%20recovery%20verification&select=id')
+  assert len(teachers)==1
+  tid=teachers[0]['id'];classes=rest('ts_classes',query=f'teacher_id=eq.{tid}&title=eq.Temporary%20version%20recovery&select=id')
+  assert len(classes)==1
+  cid=classes[0]['id'];qs=rest('ts_questions',query=f'class_id=eq.{cid}&select=id')
+  for q in qs:rest('ts_responses',{'status':'done'},f"question_id=eq.{q['id']}",method='PATCH')
+  m.sql("delete from public.ts_classes where id='"+cid+"'")
+  rest('ts_teachers',query=f'id=eq.{tid}',method='DELETE')
+  print('Cleaned only failed synthetic test fixture before upload; no audio was created.');return
  baseline=m.sql('select status,count(*) from public.ts_responses group by status')
  assert all(r['status']=='done' for r in baseline), 'Existing unfinished work: defer deployment/test'
  if '--migrate' in sys.argv:
-  m.sql((m.ROOT/'supabase/migrations/20261024034512_recording_recovery_versions.sql').read_text())
+  migration='20261024041016_safe_class_delete.sql' if '--sonnet' in sys.argv else '20261024034512_recording_recovery_versions.sql'
+  m.sql((m.ROOT/'supabase/migrations'/migration).read_text())
   print('Additive version migration applied; existing responses all done.');return
- tid=str(uuid.uuid4());owner=uuid.uuid4().hex+uuid.uuid4().hex;cid=None
+ tid=str(uuid.uuid4());owner=uuid.uuid4().hex+uuid.uuid4().hex;cid=None;busy=None
  report={'baseline':baseline,'checks':[]}
  def passed(s):report['checks'].append(s)
  def silence(seconds):
@@ -31,6 +42,19 @@ def main():
    except RuntimeError as e:assert code in str(e);return
    raise AssertionError('Expected rejection '+action)
   first=call('start');a=first['recording_version'];assert a
+  if '--sonnet' in sys.argv:
+   other=uuid.uuid4().hex
+   c.call('join',code=code,token=other,name='Synthetic busy',studentId='BUSY')
+   busy=c.call('start',code=code,token=other,questionId=q['id'])
+   rest('ts_responses',{'status':'processing'},f"id=eq.{busy['id']}",method='PATCH')
+   try:c.call('delete_class',owner=owner,classId=cid)
+   except RuntimeError as e:assert '未刪除' in str(e)
+   else:raise AssertionError('Busy class deletion should fail')
+   assert rest('ts_responses',query=f"id=eq.{first['id']}&select=status")[0]['status']=='recording'
+   assert rest('ts_classes',query=f'id=eq.{cid}&select=status')[0]['status']=='active'
+   assert rest('ts_questions',query=f"id=eq.{q['id']}&select=status")[0]['status']=='active'
+   rest('ts_responses',{'status':'done'},f"id=eq.{busy['id']}",method='PATCH')
+   passed('Busy delete rolls back class/question/cancellation; pending recording remains uploadable')
   signed=call('upload_ticket',version=a)
   m.request(signed['signedUrl'],silence(1),{'Content-Type':'audio/wav'},method='PUT')
   b=str(uuid.uuid4())
@@ -45,7 +69,16 @@ def main():
   try:m.request(signed['signedUrl'],silence(1),{'Content-Type':'audio/wav'},method='PUT')
   except RuntimeError:pass
   denied('submit_saved','STALE_RECORDING',version=a)
-  assert call('submit_saved',version=b)['received'];assert call('submit_saved',version=b)['received']
+  digest=hashlib.sha256(silence(2)).hexdigest()
+  if '--sonnet' in sys.argv:
+   wrong=hashlib.sha256(silence(1)).hexdigest()
+   denied('upload_ticket','另一個分頁',version=b,digest=wrong)
+   denied('submit_saved','另一個分頁',version=b,digest=wrong)
+  assert call('submit_saved',version=b,digest=digest)['received'];assert call('submit_saved',version=b,digest=digest)['received']
+  if '--sonnet' in sys.argv:
+   denied('upload_ticket','另一個分頁',version=b,digest=wrong)
+   denied('submit_saved','另一個分頁',version=b,digest=wrong)
+   passed('Same version different content rejected before and after acceptance; matching content retry succeeds')
   for _ in range(40):
    row=rest('ts_responses',query=f"id=eq.{first['id']}&select=*")[0]
    if row['status']=='done':break
@@ -62,7 +95,8 @@ def main():
   passed('Accepted recording protected; duplicate requests do not restart processing')
   report['passed']=True
  finally:
-  out=m.ROOT/'reviews/recording-recovery-2026-10-24.json';out.write_text(json.dumps(report,indent=2))
+  out=m.ROOT/('reviews/sonnet-2026-10-24/live-verification.json' if '--sonnet' in sys.argv else 'reviews/recording-recovery-2026-10-24.json');out.write_text(json.dumps(report,indent=2))
+  if busy:rest('ts_responses',{'status':'done'},f"id=eq.{busy['id']}",method='PATCH')
   if cid:c.call('delete_class',owner=owner,classId=cid)
   rest('ts_teachers',query=f'id=eq.{tid}',method='DELETE')
   report['after_cleanup']=m.sql('select status,count(*) from public.ts_responses group by status')
