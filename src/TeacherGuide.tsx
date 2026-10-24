@@ -51,6 +51,10 @@ export function TeacherGuide({ lang }: { lang: Lang }) {
           "先按「啟用課堂」，再按題目旁的「開放」。學生按「開始錄音」，按題目設定最多說 10、20 或 120 秒，時間到自動送出，也能提前送出。",
         ),
         t(
+          "Choose Teaching focus to hide the class sidebar and preparation area while keeping question selection and Open/Close controls. Show classes brings the sidebar back. Full transcripts remain visible, and unsaved question edits are kept when you leave focus mode.",
+          "按「專注授課」可收起左側課堂清單與備課區，仍可切換題目、開放及收題。按「展開課堂」即可回到完整工作台。逐字稿維持全文顯示；離開專注模式時，尚未儲存的題目內容也會保留。",
+        ),
+        t(
           "Each student gets their own full recording time and one response per question. Close question stops new recordings; recordings already started can finish. End class when the activity is over.",
           "每位學生都有自己的完整錄音時間，每題作答一次。「收題」停止新的錄音，已開始的錄音仍可完成。活動結束後按「結束課堂」。",
         ),

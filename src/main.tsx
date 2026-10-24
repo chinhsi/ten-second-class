@@ -169,6 +169,8 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
   const [owner, setOwner] = useState(sessionStorage.getItem("ts-owner") || "");
   const [logged, setLogged] = useState(false);
   const [admin, setAdmin] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [teachingFocus, setTeachingFocus] = useState(false);
   const [allowLongRecordings, setAllowLongRecordings] = useState(false);
   const [classes, setClasses] = useState<any[]>([]);
   const [cls, setCls] = useState<any>(null);
@@ -379,8 +381,10 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
       </main>
     );
   return (
-    <main className="workspace">
-      <aside>
+    <main
+      className={`workspace${sidebarCollapsed || teachingFocus ? " sidebar-collapsed" : ""}${teachingFocus ? " teaching-focus" : ""}`}
+    >
+      <aside id="class-sidebar" hidden={sidebarCollapsed || teachingFocus}>
         <div className="eyebrow">TEACHER WORKSPACE</div>
         <h2>{t("My classes", "我的課堂")}</h2>
         <form
@@ -447,6 +451,34 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
         </button>
       </aside>
       <section className="content">
+        <div className="workspace-tools">
+          <button
+            className="secondary"
+            aria-controls="class-sidebar"
+            aria-expanded={!sidebarCollapsed && !teachingFocus}
+            onClick={() => {
+              if (teachingFocus) {
+                setTeachingFocus(false);
+                setSidebarCollapsed(false);
+              } else setSidebarCollapsed(!sidebarCollapsed);
+            }}
+          >
+            {sidebarCollapsed || teachingFocus
+              ? t("Show classes", "展開課堂")
+              : t("Hide classes", "收起課堂")}
+          </button>
+          {cls && (
+            <button
+              className="secondary"
+              aria-pressed={teachingFocus}
+              onClick={() => setTeachingFocus(!teachingFocus)}
+            >
+              {teachingFocus
+                ? t("Exit teaching focus", "離開專注授課")
+                : t("Teaching focus", "專注授課")}
+            </button>
+          )}
+        </div>
         {error && (
           <p className="error" role="alert">
             {error}
@@ -533,7 +565,7 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
                 </button>
               </div>
             </div>
-            <div className="top-grid">
+            <div className="top-grid" hidden={teachingFocus}>
               <section className="card">
                 <div className="section-title">
                   <h2>{t("Prepare questions", "課前備題")}</h2>
@@ -889,6 +921,40 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
                   ))}
                 </select>
               </div>
+              {teachingFocus && question && (
+                <div className="focus-question">
+                  <div>
+                    <strong>{question.prompt}</strong>
+                    <small>
+                      {statusLabel(question.status, lang)} ·{" "}
+                      {question.max_seconds || 10}s
+                    </small>
+                  </div>
+                  <button
+                    className="secondary"
+                    disabled={
+                      busy ||
+                      (question.status !== "active" && cls.status !== "active")
+                    }
+                    onClick={() =>
+                      run(async () => {
+                        if (question.status === "active")
+                          await call("close_question", { id: question.id });
+                        else
+                          await call("open_question", {
+                            id: question.id,
+                            classId: cls.id,
+                          });
+                        await refresh();
+                      })
+                    }
+                  >
+                    {question.status === "active"
+                      ? t("Close", "收題")
+                      : t("Open", "開放")}
+                  </button>
+                </div>
+              )}
               <div className="stats">
                 <div>
                   <strong>
@@ -1054,7 +1120,7 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
                             </td>
                             <td>
                               {r?.result?.feedback}
-                              <small>
+                              <small className="response-transcript">
                                 {r?.result?.transcript &&
                                   `「${r.result.transcript}」`}
                               </small>

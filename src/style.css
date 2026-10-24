@@ -1029,3 +1029,61 @@ header .guide-link {
     padding: 12px;
   }
 }
+
+/* Keep preparation mounted so unsaved work survives focus mode. */
+.workspace [hidden] {
+  display: none !important;
+}
+.workspace.sidebar-collapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+.workspace-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.focus-question {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 20px 0;
+  padding: 16px;
+  background: #f0f3eb;
+  border-radius: 12px;
+}
+.focus-question > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.focus-question button {
+  flex-shrink: 0;
+}
+.response-transcript {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.results td {
+  vertical-align: top;
+}
+.teaching-focus .content {
+  padding-top: 20px;
+}
+.teaching-focus .class-head {
+  margin-bottom: 16px;
+}
+.teaching-focus .results {
+  margin-top: 0;
+}
+@media (max-width: 720px) {
+  .results .section-title {
+    flex-wrap: wrap;
+  }
+  .results .section-title select {
+    max-width: 100%;
+    min-width: 0;
+  }
+}
