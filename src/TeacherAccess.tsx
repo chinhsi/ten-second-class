@@ -130,6 +130,23 @@ export function TeacherAccess({
                 <button
                   className="quiet"
                   disabled={busy}
+                  onClick={() =>
+                    void run(async () => {
+                      await call("teacher_recording_access", {
+                        id: teacher.id,
+                        allowed: !teacher.allow_long_recordings,
+                      });
+                      await refresh();
+                    })
+                  }
+                >
+                  {teacher.allow_long_recordings
+                    ? t("Turn off 2-minute access", "關閉兩分鐘權限")
+                    : t("Allow 2-minute recordings", "開放兩分鐘錄音")}
+                </button>
+                <button
+                  className="quiet"
+                  disabled={busy}
                   onClick={() => {
                     if (
                       !confirm(

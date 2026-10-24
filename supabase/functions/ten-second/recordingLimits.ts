@@ -1,7 +1,11 @@
 export const LONG_SECONDS = 120;
 export const LONG_RETRY_MS = 180_000;
 export function recordingSeconds(q: { max_seconds?: number }): number {
-  return q.max_seconds === LONG_SECONDS ? LONG_SECONDS : 10;
+  return q.max_seconds === LONG_SECONDS
+    ? LONG_SECONDS
+    : q.max_seconds === 20
+      ? 20
+      : 10;
 }
 export function wavByteLimit(seconds: number): number {
   return 44 + seconds * 32000;

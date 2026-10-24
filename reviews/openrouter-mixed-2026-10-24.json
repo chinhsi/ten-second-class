@@ -1,0 +1,28 @@
+{
+  "status": "done",
+  "scope": "Local production routing module; simulated Google 503; one real OpenRouter call; synthetic 120-second audio",
+  "attempts": [
+    {
+      "channel": "google",
+      "model": "test",
+      "ms": 16,
+      "error": "HTTP_503"
+    },
+    {
+      "channel": "openrouter",
+      "model": "google/gemini-3.8-flash",
+      "ms": 16462,
+      "request_id": "gen-1792803923-RVDHz6cTKbC1Tt11L8tW",
+      "cost": 0.003867
+    }
+  ],
+  "words": 79,
+  "ending_present": true,
+  "transcript": "我覺得呢個方法唔係淨係叫學生記答案，而係要畀佢哋自己試。 For example, we can ask students to explain their prior knowledge. 我同意這個想法，但是我們還要考慮學生有沒有足夠的時間。 如果老師一開始就講晒個答案，佢哋可能唔會再諗點解。 The important part is formative assessment, not just getting the correct answer. 所以我會先問：你點樣知到呢個解釋係啱嘅？ 然後讓他們比較兩種解釋，說出自己的理由，也可以修改原來的想法。 I would give feedback after listening to the explanation. 有啲同學可能識個概念，但係一時唔知點樣用英文講，噉都唔代表佢唔明。 學生可以換一種語言表達，我們應該看他的意思，而不是只看語言。 Code-switching can help students connect an unfamiliar term with something they already understand. 我唔會即刻打斷佢，等佢講完先，再問返佢頭先嗰個例子。 如果例子和結論不一致，老師可以請他再解釋一次。 That gives the teacher evidence of understanding, and gives students a chance to revise. 最後大家一齊比較，睇下邊個理由有證據支持，唔係淨係揀講得最流利嗰個。 This is student number one. The final word is pineapple.",
+  "mixed_language_checks": {
+    "cantonese_markers": true,
+    "english_terms": true,
+    "full_ending": true
+  },
+  "quality_note": "Synthetic phrase-level switching; wording preserved with occasional homophone spelling error (知道→知到); not natural speech accuracy benchmark."
+}

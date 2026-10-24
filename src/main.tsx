@@ -152,8 +152,8 @@ function App() {
       <footer>
         {tx(
           lang,
-          "10 seconds or 2 minutes · AI gives a first pass; teachers can review the audio",
-          "10 秒或 2 分鐘 · AI 提供初步回饋，老師可聽錄音覆核",
+          "10 or 20 seconds · 2 minutes for enabled accounts · AI results for teacher review",
+          "10／20 秒・指定帳號可用 2 分鐘・AI 初步判讀供老師覆核",
         )}
       </footer>
     </>
@@ -164,6 +164,7 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
   const [owner, setOwner] = useState(sessionStorage.getItem("ts-owner") || "");
   const [logged, setLogged] = useState(false);
   const [admin, setAdmin] = useState(false);
+  const [allowLongRecordings, setAllowLongRecordings] = useState(false);
   const [classes, setClasses] = useState<any[]>([]);
   const [cls, setCls] = useState<any>(null);
   const [d, setD] = useState<any>({
@@ -333,6 +334,7 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
             run(async () => {
               const profile = await call("teacher_profile");
               setAdmin(profile.admin === true);
+              setAllowLongRecordings(profile.allowLongRecordings === true);
               await refresh();
               sessionStorage.setItem("ts-owner", owner);
               setLogged(true);
@@ -700,12 +702,15 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
                       onChange={(e) => setMaxSeconds(Number(e.target.value))}
                     >
                       <option value={10}>{t("10 seconds", "10 秒")}</option>
-                      <option value={120} disabled={d.members.length > 15}>
-                        {t(
-                          "2 minutes · up to 15 students",
-                          "2 分鐘・最多 15 人",
-                        )}
-                      </option>
+                      <option value={20}>{t("20 seconds", "20 秒")}</option>
+                      {allowLongRecordings && (
+                        <option value={120} disabled={d.members.length > 15}>
+                          {t(
+                            "2 minutes · up to 15 students",
+                            "2 分鐘・最多 15 人",
+                          )}
+                        </option>
+                      )}
                     </select>
                   </label>
                   <div className="segmented">
@@ -1330,7 +1335,7 @@ function Recorder({
   const [phase, setPhase] = useState(() =>
     savedRecording(q.id) ? "retry" : "idle",
   );
-  const limit = q.max_seconds === 120 ? 120 : 10;
+  const limit = q.max_seconds === 120 ? 120 : q.max_seconds === 20 ? 20 : 10;
   const [left, setLeft] = useState(limit);
   const [error, setError] = useState("");
   const [pending, setPending] = useState<string | Blob | null>(() =>

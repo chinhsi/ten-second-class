@@ -1,0 +1,96 @@
+{
+  "status": "report_generation_failed",
+  "scope": "10 synthetic mixed-language recordings through deployed Edge; not physical phones or classroom Wi-Fi",
+  "baseline": [
+    {
+      "status": "done",
+      "count": 28
+    }
+  ],
+  "checks": {
+    "teacher_and_permission": true
+  },
+  "class_id": "91696ffa-08a8-436e-ab51-61adf3278d86",
+  "question_id": "c23bf18d-cb80-4e3b-b105-13123b5c41ed",
+  "clients": [
+    {
+      "student": 1,
+      "id": "01b69c6f-ad0b-4067-a3f9-16ab3dfb1585",
+      "upload_seconds": 8.641,
+      "confirmation_seconds": 1.156,
+      "submitted_elapsed_seconds": 9.798
+    },
+    {
+      "student": 2,
+      "id": "8e55a5ea-17a5-4ad7-b59c-5a11aab3cf14",
+      "upload_seconds": 3.927,
+      "confirmation_seconds": 1.881,
+      "submitted_elapsed_seconds": 5.81
+    },
+    {
+      "student": 3,
+      "id": "746579f0-5344-47a1-a8f1-ada0a1e1ba23",
+      "upload_seconds": 9.952,
+      "confirmation_seconds": 1.755,
+      "submitted_elapsed_seconds": 11.708
+    },
+    {
+      "student": 4,
+      "id": "97f11d3e-0702-4ba8-a08a-f5d3f1f7e809",
+      "upload_seconds": 4.892,
+      "confirmation_seconds": 1.412,
+      "submitted_elapsed_seconds": 6.305
+    },
+    {
+      "student": 5,
+      "id": "50add92a-eb98-4060-bdd9-20b2bff1ced8",
+      "upload_seconds": 8.66,
+      "confirmation_seconds": 0.833,
+      "submitted_elapsed_seconds": 9.495
+    },
+    {
+      "student": 6,
+      "id": "fad6009f-a115-4c56-bded-fd418e6b9877",
+      "upload_seconds": 4.687,
+      "confirmation_seconds": 1.034,
+      "submitted_elapsed_seconds": 5.725
+    },
+    {
+      "student": 7,
+      "id": "73b7599a-d546-41c5-bb6b-0c9c43eab1c1",
+      "upload_seconds": 5.376,
+      "confirmation_seconds": 0.895,
+      "submitted_elapsed_seconds": 6.275
+    },
+    {
+      "student": 8,
+      "id": "a1cac8d6-7989-43d6-b4e4-a82ce537afd1",
+      "upload_seconds": 7.007,
+      "confirmation_seconds": 1.061,
+      "submitted_elapsed_seconds": 8.073
+    },
+    {
+      "student": 9,
+      "id": "0f9bfd37-e5af-4695-b212-c24b29931ade",
+      "upload_seconds": 12.073,
+      "confirmation_seconds": 0.83,
+      "submitted_elapsed_seconds": 12.908
+    },
+    {
+      "student": 10,
+      "id": "4c6ae06c-eca4-4b56-a9eb-12ce4b54f886",
+      "upload_seconds": 5.241,
+      "confirmation_seconds": 0.953,
+      "submitted_elapsed_seconds": 6.21
+    }
+  ],
+  "observed_all_terminal_seconds": 24.091,
+  "cleanup": "temporary class/audio/teacher removed",
+  "after_cleanup": [
+    {
+      "status": "done",
+      "count": 28
+    }
+  ],
+  "error": "Python 3.10 rejected two-digit fractional ISO seconds; per-response rows were not persisted before analysis. No per-response success claim. Fixed raw-results-first persistence and fractional-second normalization before one bounded repair run."
+}

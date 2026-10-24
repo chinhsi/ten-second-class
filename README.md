@@ -169,3 +169,25 @@ Supabase secrets：`TEN_SECOND_OPENROUTER_API_KEY`、`TEN_SECOND_OPENROUTER_MODE
 `assessment_route`後端日誌只記response ID、模型、各通道耗時、錯誤代碼及OpenRouter回傳費用／request ID，不記錄音、逐字稿、key或供應商錯誤原文。課堂畫面不需要手動切通道。
 
 驗證：`node --experimental-strip-types scripts/test-assessment-fallback.mjs`（模擬失敗／逾時／無效結果／禁止無限重試）；加`--live`限一筆合成音訊，既有報告會阻止自動重跑。`reviews/openrouter-fallback-2026-10-23.json`記錄本機直接使用正式路由模組、Google模擬503、真實OpenRouter兩分鐘英語音訊8.529秒／279詞／結尾完整，US$0.00360225。這不是正式Edge上強迫失敗測試，也不是15人並發測試。未啟動Chrome。
+
+
+## 2026-10-24 星期一課堂準備
+
+一般教師可選10／20秒；管理員帳號可選120秒，其他教師需管理員在「管理老師使用權限」開啟「兩分鐘錄音」。登入後才顯示允許選項，後端另驗權限；資料庫觸發器也阻止未獲授權者建立或重新開啟長題。收回權限不刪除錄音，已開始的作答仍可提交及補處理。兩分鐘題目仍限15人、全專案4份並行。
+
+錄音提示共用`assessmentRequest.ts`與`transcriptionPolicy.ts`：保留粵語、普通話、英文切換、粵語慣用字、英文原詞，不翻譯、書面化、補寫或替評分改寫逐字稿；局部聽不清標記[聽不清]。只有題目選「自動辨識」才適合無指定目標語的開放討論；關閉評分可只保留逐字稿。
+
+計時：`submitted_at`→`worker_claimed_at`為排隊；`worker_claimed_at`→`ai_started_at`為派工、下載與驗證；`ai_started_at`→`processing_completed_at`為本次評測（含少量資料庫及本機處理）；`provider_attempts[].ms`為各AI通道的完整HTTP請求／讀取時間。上傳時間由驗收客戶端另記，避免把錄音時間算入。重試會重新計時，以submitted_at隔離舊工作結果。
+
+驗收入口：`python3 scripts/classroom-readiness.py generate|migrate|live|twenty`。generate只使用本機三語合成聲音；live限一輪10份、報告存在拒絕重送，原始結果先落盤再分析；twenty只送20秒靜音，無AI費用。2026-10-24第一輪報告解析不接受兩位小數秒，留下失敗紀錄，修正後以`live --report-repair-run`限定補跑一輪；不得把第一輪說成驗收通過。自然、同一說話者高速三語切換尚待真人錄音。
+
+星期一（2026-10-26）現場：
+1. 老師重新登入，新增題目時確認120秒選項；混合語言選自動辨識，需要原話時關閉評分。
+2. 課前用2–3支實際手機連課堂Wi-Fi，從Safari/Chrome開加入連結，允許麥克風；不透過通訊軟體內建瀏覽器。
+3. 試錄、提前提交、確認老師看到逐字稿並可播放原音。另一次完整120秒確認結尾。
+4. 錄音和上傳時保持學生分頁開著、不鎖螢幕；上傳失敗按「重新上傳這段錄音」，不要清除分頁資料。
+5. 已保存但AI失敗由老師按「補處理未完成作答」；長題卡住3分鐘後可補處理，不要求學生先重錄。排隊可由同一按鍵喚醒，沒有定時自動救援。
+
+本次不啟動Chrome，不把腳本驗收當成手機麥克風或現場Wi-Fi驗收。
+
+2026-10-24驗收結果：`reviews/classroom-readiness-2026-10-24-report-repair.json`，10/10完成，觀察全數完成23.297秒；上傳4.953–11.178秒、排隊0.092–7.322秒、AI通道4.268–5.079秒，均為本次測試，不保證現場速度。重複提交不重跑，老師dashboard及原音連結、失敗／逾180秒工作補處理通過；清理後原有28份仍done。OpenRouter單份三語備援16.462秒、US$0.003867，為正式路由模組的本機模擬直連503→真實備援測試。抽查完整逐字稿保留三語，但有「知道→知到」等同音字誤寫；不宣稱真人快速切換已驗證。

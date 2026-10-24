@@ -1,0 +1,430 @@
+{
+  "status": "complete",
+  "scope": "10 synthetic mixed-language recordings through deployed Edge; not physical phones or classroom Wi-Fi",
+  "baseline": [
+    {
+      "status": "done",
+      "count": 28
+    }
+  ],
+  "checks": {
+    "teacher_and_permission": true,
+    "ten_complete": true,
+    "mixed_language_markers": true,
+    "duplicate_no_restart": true,
+    "teacher_dashboard_audio": true,
+    "failed_and_expired_recovery": true
+  },
+  "class_id": "a1dbeaa1-428d-4f78-93c8-3a50ac647c33",
+  "question_id": "f871a283-2ce4-4db5-b74f-cbb7339faf97",
+  "clients": [
+    {
+      "student": 1,
+      "id": "dd7366d1-c286-4a6e-acdf-6397f2befdba",
+      "upload_seconds": 8.225,
+      "confirmation_seconds": 0.938,
+      "submitted_elapsed_seconds": 9.163
+    },
+    {
+      "student": 2,
+      "id": "67556a94-83a2-40f6-b525-42cce5700fa7",
+      "upload_seconds": 11.178,
+      "confirmation_seconds": 0.954,
+      "submitted_elapsed_seconds": 12.132
+    },
+    {
+      "student": 3,
+      "id": "09b6776b-822e-4da7-86ca-d5df5a5d723a",
+      "upload_seconds": 4.953,
+      "confirmation_seconds": 1.172,
+      "submitted_elapsed_seconds": 6.126
+    },
+    {
+      "student": 4,
+      "id": "7559a417-5545-44d3-889a-298df05b27fa",
+      "upload_seconds": 7.851,
+      "confirmation_seconds": 0.867,
+      "submitted_elapsed_seconds": 8.721
+    },
+    {
+      "student": 5,
+      "id": "fce6ac7b-0536-439f-8c9c-b0eccd34f414",
+      "upload_seconds": 5.016,
+      "confirmation_seconds": 1.06,
+      "submitted_elapsed_seconds": 6.079
+    },
+    {
+      "student": 6,
+      "id": "04338f4d-a56a-47ef-94c6-55464bb8330f",
+      "upload_seconds": 6.265,
+      "confirmation_seconds": 0.956,
+      "submitted_elapsed_seconds": 7.224
+    },
+    {
+      "student": 7,
+      "id": "5e5be9c0-e72e-4586-a03b-ae85d9808892",
+      "upload_seconds": 6.573,
+      "confirmation_seconds": 0.889,
+      "submitted_elapsed_seconds": 7.465
+    },
+    {
+      "student": 8,
+      "id": "025047c0-4531-4a38-8668-e249b21bc7f7",
+      "upload_seconds": 7.961,
+      "confirmation_seconds": 0.831,
+      "submitted_elapsed_seconds": 8.795
+    },
+    {
+      "student": 9,
+      "id": "40fd18cc-ecbb-46af-9df0-d2e9bd1c48dd",
+      "upload_seconds": 7.411,
+      "confirmation_seconds": 1.289,
+      "submitted_elapsed_seconds": 8.703
+    },
+    {
+      "student": 10,
+      "id": "9392474f-7598-4ac2-83cc-347c00b1dfc9",
+      "upload_seconds": 6.304,
+      "confirmation_seconds": 0.86,
+      "submitted_elapsed_seconds": 7.167
+    }
+  ],
+  "observed_all_terminal_seconds": 23.297,
+  "results": [
+    {
+      "id": "7559a417-5545-44d3-889a-298df05b27fa",
+      "status": "done",
+      "submitted_at": "2026-10-24T01:09:15.48+00:00",
+      "worker_claimed_at": "2026-10-24T01:09:19.358663+00:00",
+      "worker_started_at": "2026-10-24T01:09:19.464+00:00",
+      "ai_started_at": "2026-10-24T01:09:19.658+00:00",
+      "processing_completed_at": "2026-10-24T01:09:24.59+00:00",
+      "provider_attempts": [
+        {
+          "ms": 4650,
+          "model": "gemini-3.7-flash",
+          "channel": "google"
+        }
+      ],
+      "result": {
+        "issue": "",
+        "level": "transcribed",
+        "score": null,
+        "feedback": "",
+        "transcript": "我覺得呢個方法唔係淨係叫學生記答案，而係要畀佢哋自己試。For example, we can ask students to explain their prior knowledge. 我同意這個想法，但是我們還要考慮學生有沒有足夠的時間。如果老師一開始就講晒個答案，佢哋可能唔會再諗點解。The important part is formative assessment, not just getting the correct answer. 所以我會先問，你點樣知到呢個解釋係啱嘅？然後讓他們比較兩種解釋，說出自己的理由，也可以修改原來的想法。I would give feedback after listening to the explanation. 有啲同學可能識個概念，但係一時唔知點樣用英文講，咁都唔代表佢唔明。學生可以換一種語言表達，我們應該看他的意思，而不是只看語言。Code-switching can help students connect an unfamiliar term with something they already understand. 我唔會即刻打斷佢，等佢講完先，再問返佢頭先嗰個例子。如果例子和結論不一致，老師可以請他再解釋一次。That gives the teacher evidence of understanding, and gives students a chance to revise. 最後大家一齊比較，睇下邊個理由有證據支持，唔係淨係揀講得最流利嗰個。This is student number four. The final word is pineapple."
+      },
+      "debug_error": null,
+      "path": "a1dbeaa1-428d-4f78-93c8-3a50ac647c33/f871a283-2ce4-4db5-b74f-cbb7339faf97/2c329711-1488-4160-9b78-090dab6bc365/7559a417-5545-44d3-889a-298df05b27fa.wav",
+      "queue_seconds": 3.878663,
+      "dispatch_and_download_seconds": 0.299337,
+      "assessment_seconds": 4.932,
+      "ending_present": true,
+      "cantonese_preserved": true,
+      "english_terms_preserved": true
+    },
+    {
+      "id": "40fd18cc-ecbb-46af-9df0-d2e9bd1c48dd",
+      "status": "done",
+      "submitted_at": "2026-10-24T01:09:15.48+00:00",
+      "worker_claimed_at": "2026-10-24T01:09:18.49799+00:00",
+      "worker_started_at": "2026-10-24T01:09:18.581+00:00",
+      "ai_started_at": "2026-10-24T01:09:18.717+00:00",
+      "processing_completed_at": "2026-10-24T01:09:23.756+00:00",
+      "provider_attempts": [
+        {
+          "ms": 4819,
+          "model": "gemini-3.7-flash",
+          "channel": "google"
+        }
+      ],
+      "result": {
+        "issue": "",
+        "level": "transcribed",
+        "score": null,
+        "feedback": "",
+        "transcript": "我覺得呢個方法唔係淨係叫學生記答案，而係要畀佢哋自己試。For example, we can ask students to explain their prior knowledge. 我同意這個想法，但是我們還要考慮學生有沒有足夠的時間。如果老師一開始就講晒個答案，佢哋可能唔會再諗點解。The important part is formative assessment, not just getting the correct answer. 所以我會先問，你點樣知到呢個解釋係啱嘅？然後讓他們比較兩種解釋，說出自己的理由，也可以修改原來的想法。I would give feedback after listening to the explanation. 有啲同學可能識個概念，但係一時唔知點樣用英文講，噉都唔代表佢唔明。學生可以換一種語言表達，我們應該看他的意思，而不是只看語言。Code switching can help students connect an unfamiliar term with something they already understand. 我唔會即刻打斷佢，等佢講完先，再問返佢頭先嗰個例子。如果例子和結論不一致，老師可以請他再解釋一次。That gives the teacher evidence of understanding, and gives students a chance to revise. 最後大家一齊比較，睇下邊個理由有證據支持，唔係淨係揀講得最流利嗰個。This is student number nine, the final word is pineapple."
+      },
+      "debug_error": null,
+      "path": "a1dbeaa1-428d-4f78-93c8-3a50ac647c33/f871a283-2ce4-4db5-b74f-cbb7339faf97/44f1c47c-c3bf-486e-9d51-0cc466e409f5/40fd18cc-ecbb-46af-9df0-d2e9bd1c48dd.wav",
+      "queue_seconds": 3.01799,
+      "dispatch_and_download_seconds": 0.21901,
+      "assessment_seconds": 5.039,
+      "ending_present": true,
+      "cantonese_preserved": true,
+      "english_terms_preserved": true
+    },
+    {
+      "id": "025047c0-4531-4a38-8668-e249b21bc7f7",
+      "status": "done",
+      "submitted_at": "2026-10-24T01:09:15.624+00:00",
+      "worker_claimed_at": "2026-10-24T01:09:19.51523+00:00",
+      "worker_started_at": "2026-10-24T01:09:19.622+00:00",
+      "ai_started_at": "2026-10-24T01:09:19.853+00:00",
+      "processing_completed_at": "2026-10-24T01:09:24.594+00:00",
+      "provider_attempts": [
+        {
+          "ms": 4460,
+          "model": "gemini-3.7-flash",
+          "channel": "google"
+        }
+      ],
+      "result": {
+        "issue": "",
+        "level": "transcribed",
+        "score": null,
+        "feedback": "",
+        "transcript": "我覺得呢個方法唔係淨係叫學生記答案，而係要畀佢哋自己試。For example, we can ask students to explain their prior knowledge. 我同意這個想法，但是我們還要考慮學生有沒有足夠的時間。如果老師一開始就講晒個答案，佢哋可能唔會再諗點解。The important part is formative assessment, not just getting the correct answer. 所以我會先問：「你點樣知道呢個解釋係啱嘅？」然後讓他們比較兩種解釋，說出自己的理由，也可以修改原來的想法。I would give feedback after listening to the explanation. 有啲同學可能識個概念，但係一時唔知點樣用英文講，噉都唔代表佢唔明。學生可以換一種語言表達，我們應該看他的意思，而不是只看語言。Code-switching can help students connect an unfamiliar term with something they already understand. 我唔會即刻打斷佢，等佢講完先，再問返佢頭先嗰個例子。如果例子和結論不一致，老師可以請他再解釋一次。That gives the teacher evidence of understanding and gives students a chance to revise. 最後大家一齊比較，睇下邊個理由有證據支持，唔係淨係揀講得最流利嗰個。This is student number eight. The final word is pineapple."
+      },
+      "debug_error": null,
+      "path": "a1dbeaa1-428d-4f78-93c8-3a50ac647c33/f871a283-2ce4-4db5-b74f-cbb7339faf97/5b713c31-ec23-44ea-a836-551ca2898677/025047c0-4531-4a38-8668-e249b21bc7f7.wav",
+      "queue_seconds": 3.89123,
+      "dispatch_and_download_seconds": 0.33777,
+      "assessment_seconds": 4.741,
+      "ending_present": true,
+      "cantonese_preserved": true,
+      "english_terms_preserved": true
+    },
+    {
+      "id": "67556a94-83a2-40f6-b525-42cce5700fa7",
+      "status": "done",
+      "submitted_at": "2026-10-24T01:09:18.921+00:00",
+      "worker_claimed_at": "2026-10-24T01:09:23.813243+00:00",
+      "worker_started_at": "2026-10-24T01:09:23.924+00:00",
+      "ai_started_at": "2026-10-24T01:09:24.067+00:00",
+      "processing_completed_at": "2026-10-24T01:09:28.822+00:00",
+      "provider_attempts": [
+        {
+          "ms": 4542,
+          "model": "gemini-3.7-flash",
+          "channel": "google"
+        }
+      ],
+      "result": {
+        "issue": "",
+        "level": "transcribed",
+        "score": null,
+        "feedback": "",
+        "transcript": "我覺得呢個方法唔係淨係叫學生記答案，而係要畀佢哋自己試。For example, we can ask students to explain their prior knowledge. 我同意這個想法，但是我們還要考慮學生有沒有足夠的時間。如果老師一開始就講晒個答案，佢哋可能唔會再諗點解。The important part is formative assessment, not just getting the correct answer. 所以我會先問：你點樣知呢個解釋係啱嘅？然後讓他們比較兩種解釋，說出自己的理由，也可以修改原來的想法。I would give feedback after listening to the explanation. 有啲同學可能識個概念，但係一時唔知點樣用英文講，咁都唔代表佢唔明。學生可以換一種語言表達，我們應該看他的意思，而不是只看語言。Code-switching can help students connect an unfamiliar term with something they already understand. 我唔會即刻打斷佢，等佢講完先，再問返佢頭先嗰個例子。如果例子和結論不一致，老師可以請他再解釋一次。That gives the teacher evidence of understanding, and gives students a chance to revise. 最後大家一齊比較，睇下邊個理由有證據支持，唔係淨係揀講得最流利嗰個。This is student number two. The final word is pineapple."
+      },
+      "debug_error": null,
+      "path": "a1dbeaa1-428d-4f78-93c8-3a50ac647c33/f871a283-2ce4-4db5-b74f-cbb7339faf97/63ffa92a-e96f-4cbe-9845-e82464744411/67556a94-83a2-40f6-b525-42cce5700fa7.wav",
+      "queue_seconds": 4.892243,
+      "dispatch_and_download_seconds": 0.253757,
+      "assessment_seconds": 4.755,
+      "ending_present": true,
+      "cantonese_preserved": true,
+      "english_terms_preserved": true
+    },
+    {
+      "id": "9392474f-7598-4ac2-83cc-347c00b1dfc9",
+      "status": "done",
+      "submitted_at": "2026-10-24T01:09:13.951+00:00",
+      "worker_claimed_at": "2026-10-24T01:09:14.058592+00:00",
+      "worker_started_at": "2026-10-24T01:09:14.162+00:00",
+      "ai_started_at": "2026-10-24T01:09:14.348+00:00",
+      "processing_completed_at": "2026-10-24T01:09:19.455+00:00",
+      "provider_attempts": [
+        {
+          "ms": 4849,
+          "model": "gemini-3.7-flash",
+          "channel": "google"
+        }
+      ],
+      "result": {
+        "issue": "",
+        "level": "transcribed",
+        "score": null,
+        "feedback": "",
+        "transcript": "我覺得呢個方法唔係淨係叫學生記答案，而係要畀佢哋自己試。For example, we can ask students to explain their prior knowledge. 我同意這個想法，但是我們還要考慮學生有沒有足夠的時間。如果老師一開始就講晒個答案，佢哋可能唔會再諗點解。The important part is formative assessment, not just getting the correct answer. 所以我會先問，你點樣知到呢個解釋係啱嘅？然後讓他們比較兩種解釋，說出自己的理由，也可以修改原來的想法。I would give feedback after listening to the explanation. 有啲同學可能識個概念，但係一時唔知點樣用英文講，咁都唔代表佢唔明。學生可以換一種語言表達，我們應該看他的意思，而不是只看語言。Code-switching can help students connect an unfamiliar term with something they already understand. 我唔會即刻打斷佢，等佢講完先，再問返佢頭先嗰個例子。如果例子和結論不一致，老師可以請他再解釋一次。That gives the teacher evidence of understanding and gives students a chance to revise. 最後大家一齊比較，睇下邊個理由有證據支持，唔係淨係揀講得最流利嗰個。This is student number 10, the final word is pineapple."
+      },
+      "debug_error": null,
+      "path": "a1dbeaa1-428d-4f78-93c8-3a50ac647c33/f871a283-2ce4-4db5-b74f-cbb7339faf97/68395edd-fa56-43fb-9669-14f0eaef528f/9392474f-7598-4ac2-83cc-347c00b1dfc9.wav",
+      "queue_seconds": 0.107592,
+      "dispatch_and_download_seconds": 0.289408,
+      "assessment_seconds": 5.107,
+      "ending_present": true,
+      "cantonese_preserved": true,
+      "english_terms_preserved": true
+    },
+    {
+      "id": "09b6776b-822e-4da7-86ca-d5df5a5d723a",
+      "status": "done",
+      "submitted_at": "2026-10-24T01:09:12.911+00:00",
+      "worker_claimed_at": "2026-10-24T01:09:13.002815+00:00",
+      "worker_started_at": "2026-10-24T01:09:13.115+00:00",
+      "ai_started_at": "2026-10-24T01:09:13.277+00:00",
+      "processing_completed_at": "2026-10-24T01:09:18.443+00:00",
+      "provider_attempts": [
+        {
+          "ms": 4890,
+          "model": "gemini-3.7-flash",
+          "channel": "google"
+        }
+      ],
+      "result": {
+        "issue": "",
+        "level": "transcribed",
+        "score": null,
+        "feedback": "",
+        "transcript": "我覺得呢個方法唔係淨係叫學生記答案，而係要畀佢哋自己試。For example, we can ask students to explain their prior knowledge. 我同意這個想法，但是我們還要考慮學生有沒有足夠的時間。如果老師一開始就講晒個答案，佢哋可能唔會再諗點解。The important part is formative assessment, not just getting the correct answer. 所以我會先問，你點樣知到呢個解釋係啱嘅？然後讓他們比較兩種解釋，說出自己的理由，也可以修改原來的想法。I would give feedback after listening to the explanation. 有啲同學可能識個概念，但係一時唔知點樣用英文講，咁都唔代表佢唔明。學生可以換一種語言表達，我們應該看他的意思，而不是只看語言。Code-switching can help students connect an unfamiliar term with something they already understand. 我唔會即刻打斷佢，等佢講完先，再問返佢頭先嗰個例子。如果例子和結論不一致，老師可以請他再解釋一次。That gives the teacher evidence of understanding, and gives students a chance to revise. 最後大家一齊比較，睇下邊個理由有證據支持，唔係淨係揀講得最流利嗰個。This is student number three. The final word is pineapple."
+      },
+      "debug_error": null,
+      "path": "a1dbeaa1-428d-4f78-93c8-3a50ac647c33/f871a283-2ce4-4db5-b74f-cbb7339faf97/6c226b1e-6789-4b60-b8df-0476347181d4/09b6776b-822e-4da7-86ca-d5df5a5d723a.wav",
+      "queue_seconds": 0.091815,
+      "dispatch_and_download_seconds": 0.274185,
+      "assessment_seconds": 5.166,
+      "ending_present": true,
+      "cantonese_preserved": true,
+      "english_terms_preserved": true
+    },
+    {
+      "id": "fce6ac7b-0536-439f-8c9c-b0eccd34f414",
+      "status": "done",
+      "submitted_at": "2026-10-24T01:09:12.864+00:00",
+      "worker_claimed_at": "2026-10-24T01:09:12.957108+00:00",
+      "worker_started_at": "2026-10-24T01:09:13.071+00:00",
+      "ai_started_at": "2026-10-24T01:09:13.26+00:00",
+      "processing_completed_at": "2026-10-24T01:09:17.804+00:00",
+      "provider_attempts": [
+        {
+          "ms": 4268,
+          "model": "gemini-3.7-flash",
+          "channel": "google"
+        }
+      ],
+      "result": {
+        "issue": "",
+        "level": "transcribed",
+        "score": null,
+        "feedback": "",
+        "transcript": "我覺得呢個方法唔係淨係叫學生記答案，而係要畀佢哋自己試。 For example, we can ask students to explain their prior knowledge. 我同意這個想法，但是我們還要考慮學生有沒有足夠的時間。 如果老師一開始就講晒個答案，佢哋可能唔會再諗點解。 The important part is formative assessment, not just getting the correct answer. 所以我會先問，你點樣知到呢個解釋係啱嘅？ 然後讓他們比較兩種解釋，說出自己的理由，也可以修改原來的想法。 I would give feedback after listening to the explanation. 有啲同學可能識個概念，但係一時唔知點樣用英文講，咁都唔代表佢唔明。 學生可以換一種語言表達，我們應該看他的意思，而不是只看語言。 Code switching can help students connect an unfamiliar term with something they already understand. 我唔會即刻打斷佢，等佢講完先，再問返佢頭先嗰個例子。 如果例子和結論不一致，老師可以請他再解釋一次。 That gives the teacher evidence of understanding, and gives students a chance to revise. 最後大家一齊比較，睇下邊個理由有證據支持，唔係淨係揀講得最流利嗰個。 This is student number five, the final word is pineapple."
+      },
+      "debug_error": null,
+      "path": "a1dbeaa1-428d-4f78-93c8-3a50ac647c33/f871a283-2ce4-4db5-b74f-cbb7339faf97/6fae76eb-8ac5-4712-b52e-53692a123de9/fce6ac7b-0536-439f-8c9c-b0eccd34f414.wav",
+      "queue_seconds": 0.093108,
+      "dispatch_and_download_seconds": 0.302892,
+      "assessment_seconds": 4.544,
+      "ending_present": true,
+      "cantonese_preserved": true,
+      "english_terms_preserved": true
+    },
+    {
+      "id": "04338f4d-a56a-47ef-94c6-55464bb8330f",
+      "status": "done",
+      "submitted_at": "2026-10-24T01:09:13.992+00:00",
+      "worker_claimed_at": "2026-10-24T01:09:14.109287+00:00",
+      "worker_started_at": "2026-10-24T01:09:14.244+00:00",
+      "ai_started_at": "2026-10-24T01:09:14.409+00:00",
+      "processing_completed_at": "2026-10-24T01:09:19.31+00:00",
+      "provider_attempts": [
+        {
+          "ms": 4645,
+          "model": "gemini-3.7-flash",
+          "channel": "google"
+        }
+      ],
+      "result": {
+        "issue": "",
+        "level": "transcribed",
+        "score": null,
+        "feedback": "",
+        "transcript": "我覺得呢個方法唔係淨係叫學生記答案，而係要畀佢哋自己試。For example, we can ask students to explain their prior knowledge. 我同意這個想法，但是我們還要考慮學生有沒有足夠的時間。如果老師一開始就講晒個答案，佢哋可能唔會再諗點解。The important part is formative assessment, not just getting the correct answer. 所以我會先問，你點樣知到呢個解釋係啱嘅？然後讓他們比較兩種解釋，說出自己的理由，也可以修改原來的想法。I would give feedback after listening to the explanation. 有啲同學可能識個概念，但係一時唔知點樣用英文講，噉都唔代表佢唔明。學生可以換一種語言表達，我們應該看他的意思，而不是只看語言。Code-switching can help students connect an unfamiliar term with something they already understand. 我唔會即刻打斷佢，等佢講完先，再問返佢頭先嗰個例子。如果例子和結論不一致，老師可以請他再解釋一次。That gives the teacher evidence of understanding, and gives students a chance to revise. 最後大家一齊比較，睇下邊個理由有證據支持，唔係淨係揀講得最流利嗰個。This is student number six, the final word is pineapple."
+      },
+      "debug_error": null,
+      "path": "a1dbeaa1-428d-4f78-93c8-3a50ac647c33/f871a283-2ce4-4db5-b74f-cbb7339faf97/a5eca61e-db24-4524-b112-38dd4144a72e/04338f4d-a56a-47ef-94c6-55464bb8330f.wav",
+      "queue_seconds": 0.117287,
+      "dispatch_and_download_seconds": 0.299713,
+      "assessment_seconds": 4.901,
+      "ending_present": true,
+      "cantonese_preserved": true,
+      "english_terms_preserved": true
+    },
+    {
+      "id": "5e5be9c0-e72e-4586-a03b-ae85d9808892",
+      "status": "done",
+      "submitted_at": "2026-10-24T01:09:14.259+00:00",
+      "worker_claimed_at": "2026-10-24T01:09:17.881078+00:00",
+      "worker_started_at": "2026-10-24T01:09:17.994+00:00",
+      "ai_started_at": "2026-10-24T01:09:18.149+00:00",
+      "processing_completed_at": "2026-10-24T01:09:23.206+00:00",
+      "provider_attempts": [
+        {
+          "ms": 4802,
+          "model": "gemini-3.7-flash",
+          "channel": "google"
+        }
+      ],
+      "result": {
+        "issue": "",
+        "level": "transcribed",
+        "score": null,
+        "feedback": "",
+        "transcript": "我覺得呢個方法唔係淨係叫學生記答案，而係要畀佢哋自己試。For example, we can ask students to explain their prior knowledge. 我同意這個想法，但是我們還要考慮學生有沒有足夠的時間。如果老師一開始就講晒個答案，佢哋可能唔會再諗點解。The important part is formative assessment, not just getting the correct answer. 所以我會先問：你點樣知到呢個解釋係啱嘅？然後讓他們比較兩種解釋，說出自己的理由，也可以修改原來的想法。I would give feedback after listening to the explanation. 有啲同學可能識個概念，但係一時唔知點樣用英文講，噉都唔代表佢唔明。學生可以換一種語言表達，我們應該看他的意思，而不是只看語言。Code switching can help students connect an unfamiliar term with something they already understand. 我唔會即刻打斷佢，等佢講完先，再問返佢頭先嗰個例子。如果例子和結論不一致，老師可以請他再解釋一次。That gives the teacher evidence of understanding, and gives students a chance to revise. 最後大家一齊比較，睇下邊個理由有證據支持，唔係淨係揀講得最流利嗰個。This is student number 7. The final word is pineapple."
+      },
+      "debug_error": null,
+      "path": "a1dbeaa1-428d-4f78-93c8-3a50ac647c33/f871a283-2ce4-4db5-b74f-cbb7339faf97/bfaca1d4-2d00-496c-9265-dc4da8f5218e/5e5be9c0-e72e-4586-a03b-ae85d9808892.wav",
+      "queue_seconds": 3.622078,
+      "dispatch_and_download_seconds": 0.267922,
+      "assessment_seconds": 5.057,
+      "ending_present": true,
+      "cantonese_preserved": true,
+      "english_terms_preserved": true
+    },
+    {
+      "id": "dd7366d1-c286-4a6e-acdf-6397f2befdba",
+      "status": "done",
+      "submitted_at": "2026-10-24T01:09:15.947+00:00",
+      "worker_claimed_at": "2026-10-24T01:09:23.269286+00:00",
+      "worker_started_at": "2026-10-24T01:09:23.46+00:00",
+      "ai_started_at": "2026-10-24T01:09:23.775+00:00",
+      "processing_completed_at": "2026-10-24T01:09:29.108+00:00",
+      "provider_attempts": [
+        {
+          "ms": 5079,
+          "model": "gemini-3.7-flash",
+          "channel": "google"
+        }
+      ],
+      "result": {
+        "issue": "",
+        "level": "transcribed",
+        "score": null,
+        "feedback": "",
+        "transcript": "我覺得呢個方法唔係淨係叫學生計答案，而係要俾佢哋自己試。 For example, we can ask students to explain their prior knowledge. 我同意這個想法，但是我們還要考慮學生有沒有足夠的時間。 如果老師一開始就講晒個答案，佢哋可能唔會再諗點解。 The important part is formative assessment, not just getting the correct answer. 所以我會先問，你點樣知道呢個解釋係啱嘅？ 然後讓他們比較兩種解釋，說出自己的理由，也可以修改原來的想法。 I would give feedback after listening to the explanation. 有啲同學可能識個概念，但係一時唔知點樣用英文講，咁都唔代表佢唔明。 學生可以換一種語言表達，我們應該看他的意思，而不是只看語言。 Code-switching can help students connect an unfamiliar term with something they already understand. 我唔會即刻打斷佢，等佢講完先，再問返佢頭先嗰個例子。 如果例子和結論不一致，老師可以請他再解釋一次。 That gives the teacher evidence of understanding, and gives students a chance to revise. 最後大家一齊比較，睇下邊個理由有證據支持，唔係淨係揀講得最流利嗰個。 This is student number one, the final word is pineapple."
+      },
+      "debug_error": null,
+      "path": "a1dbeaa1-428d-4f78-93c8-3a50ac647c33/f871a283-2ce4-4db5-b74f-cbb7339faf97/ccaeda75-7fbe-4c9c-b9c6-7cb1de436444/dd7366d1-c286-4a6e-acdf-6397f2befdba.wav",
+      "queue_seconds": 7.322286,
+      "dispatch_and_download_seconds": 0.505714,
+      "assessment_seconds": 5.333,
+      "ending_present": true,
+      "cantonese_preserved": true,
+      "english_terms_preserved": true
+    }
+  ],
+  "passed": true,
+  "cleanup": "temporary class/audio/teacher removed",
+  "after_cleanup": [
+    {
+      "status": "done",
+      "count": 28
+    }
+  ],
+  "analysis": {
+    "upload_seconds_range": [
+      4.953,
+      11.178
+    ],
+    "queue_seconds_range": [
+      0.091815,
+      7.322286
+    ],
+    "provider_seconds_range": [
+      4.268,
+      5.079
+    ],
+    "quality_review": "All 10 preserve Cantonese spelling markers, English terms and final pineapple. Two transcripts manually compared to full synthetic script: language order and clauses retained; homophone 知道 rendered 知到. Not a claim of perfect transcription or natural fast intra-sentence single-speaker code switching.",
+    "twenty_seconds_live": "640044-byte silence accepted through HTTP; no AI invocation; temporary data removed",
+    "security_advisors": "No ERROR; WARN entries concern pre-existing other InterAct schema functions/policies and auth configuration; not modified in this task."
+  }
+}

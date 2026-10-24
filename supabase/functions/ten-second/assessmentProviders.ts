@@ -158,5 +158,8 @@ export async function assessmentWithFallback(options: {
       clearTimeout(timer);
     }
   }
-  throw Error(`AI channels failed: ${JSON.stringify(attempts)}`);
+  throw Object.assign(
+    Error(`AI channels failed: ${JSON.stringify(attempts)}`),
+    { attempts },
+  );
 }

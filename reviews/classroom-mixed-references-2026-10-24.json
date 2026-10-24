@@ -1,0 +1,61 @@
+{
+  "scope": "Synthetic phrase-level Cantonese/Mandarin/English switching; not natural single-speaker intra-word switching",
+  "voices": [
+    "Sinji",
+    "Tingting",
+    "Samantha"
+  ],
+  "seconds": 120,
+  "references": [
+    {
+      "student": 1,
+      "reference": "我覺得呢個方法唔係淨係叫學生記答案，而係要畀佢哋自己試。 For example, we can ask students to explain their prior knowledge. 我同意这个想法，但是我们还要考虑学生有没有足够的时间。 如果老師一開始就講晒個答案，佢哋可能唔會再諗點解。 The important part is formative assessment, not just getting the correct answer. 所以我會先問，你點樣知道呢個解釋係啱嘅？ 然后让他们比较两种解释，说出自己的理由，也可以修改原来的想法。 I would give feedback after listening to the explanation. 有啲同學可能識個概念，但係一時唔知點樣用英文講，咁都唔代表佢唔明。 学生可以换一种语言表达，我们应该看他的意思，而不是只看语言。 Code switching can help students connect an unfamiliar term with something they already understand. 我唔會即刻打斷佢，等佢講完先，再問返佢頭先嗰個例子。 如果例子和结论不一致，老师可以请他再解释一次。 That gives the teacher evidence of understanding, and gives students a chance to revise. 最後大家一齊比較，睇下邊個理由有證據支持，唔係淨係揀講得最流利嗰個。 This is student number 1. The final word is pineapple.",
+      "sha256": "82393196fb50c1f48a2ec2b5c5e7ac25b8b344cf91755b8b4c060e092fbc7115"
+    },
+    {
+      "student": 2,
+      "reference": "我覺得呢個方法唔係淨係叫學生記答案，而係要畀佢哋自己試。 For example, we can ask students to explain their prior knowledge. 我同意这个想法，但是我们还要考虑学生有没有足够的时间。 如果老師一開始就講晒個答案，佢哋可能唔會再諗點解。 The important part is formative assessment, not just getting the correct answer. 所以我會先問，你點樣知道呢個解釋係啱嘅？ 然后让他们比较两种解释，说出自己的理由，也可以修改原来的想法。 I would give feedback after listening to the explanation. 有啲同學可能識個概念，但係一時唔知點樣用英文講，咁都唔代表佢唔明。 学生可以换一种语言表达，我们应该看他的意思，而不是只看语言。 Code switching can help students connect an unfamiliar term with something they already understand. 我唔會即刻打斷佢，等佢講完先，再問返佢頭先嗰個例子。 如果例子和结论不一致，老师可以请他再解释一次。 That gives the teacher evidence of understanding, and gives students a chance to revise. 最後大家一齊比較，睇下邊個理由有證據支持，唔係淨係揀講得最流利嗰個。 This is student number 2. The final word is pineapple.",
+      "sha256": "960e1e6d22e3d2cda526e03537e0b7c14a01ab7b82d2e3804dc69ae642205d0f"
+    },
+    {
+      "student": 3,
+      "reference": "我覺得呢個方法唔係淨係叫學生記答案，而係要畀佢哋自己試。 For example, we can ask students to explain their prior knowledge. 我同意这个想法，但是我们还要考虑学生有没有足够的时间。 如果老師一開始就講晒個答案，佢哋可能唔會再諗點解。 The important part is formative assessment, not just getting the correct answer. 所以我會先問，你點樣知道呢個解釋係啱嘅？ 然后让他们比较两种解释，说出自己的理由，也可以修改原来的想法。 I would give feedback after listening to the explanation. 有啲同學可能識個概念，但係一時唔知點樣用英文講，咁都唔代表佢唔明。 学生可以换一种语言表达，我们应该看他的意思，而不是只看语言。 Code switching can help students connect an unfamiliar term with something they already understand. 我唔會即刻打斷佢，等佢講完先，再問返佢頭先嗰個例子。 如果例子和结论不一致，老师可以请他再解释一次。 That gives the teacher evidence of understanding, and gives students a chance to revise. 最後大家一齊比較，睇下邊個理由有證據支持，唔係淨係揀講得最流利嗰個。 This is student number 3. The final word is pineapple.",
+      "sha256": "8e7e68c0dcc1afa679eae6000f42766dc71a5f14a75b999891ec7235b5e2387f"
+    },
+    {
+      "student": 4,
+      "reference": "我覺得呢個方法唔係淨係叫學生記答案，而係要畀佢哋自己試。 For example, we can ask students to explain their prior knowledge. 我同意这个想法，但是我们还要考虑学生有没有足够的时间。 如果老師一開始就講晒個答案，佢哋可能唔會再諗點解。 The important part is formative assessment, not just getting the correct answer. 所以我會先問，你點樣知道呢個解釋係啱嘅？ 然后让他们比较两种解释，说出自己的理由，也可以修改原来的想法。 I would give feedback after listening to the explanation. 有啲同學可能識個概念，但係一時唔知點樣用英文講，咁都唔代表佢唔明。 学生可以换一种语言表达，我们应该看他的意思，而不是只看语言。 Code switching can help students connect an unfamiliar term with something they already understand. 我唔會即刻打斷佢，等佢講完先，再問返佢頭先嗰個例子。 如果例子和结论不一致，老师可以请他再解释一次。 That gives the teacher evidence of understanding, and gives students a chance to revise. 最後大家一齊比較，睇下邊個理由有證據支持，唔係淨係揀講得最流利嗰個。 This is student number 4. The final word is pineapple.",
+      "sha256": "b61ba7efaa1bc5bbd36b6f0ad8e8b45eebfd1e75b9f180378ec7c50d255a46f1"
+    },
+    {
+      "student": 5,
+      "reference": "我覺得呢個方法唔係淨係叫學生記答案，而係要畀佢哋自己試。 For example, we can ask students to explain their prior knowledge. 我同意这个想法，但是我们还要考虑学生有没有足够的时间。 如果老師一開始就講晒個答案，佢哋可能唔會再諗點解。 The important part is formative assessment, not just getting the correct answer. 所以我會先問，你點樣知道呢個解釋係啱嘅？ 然后让他们比较两种解释，说出自己的理由，也可以修改原来的想法。 I would give feedback after listening to the explanation. 有啲同學可能識個概念，但係一時唔知點樣用英文講，咁都唔代表佢唔明。 学生可以换一种语言表达，我们应该看他的意思，而不是只看语言。 Code switching can help students connect an unfamiliar term with something they already understand. 我唔會即刻打斷佢，等佢講完先，再問返佢頭先嗰個例子。 如果例子和结论不一致，老师可以请他再解释一次。 That gives the teacher evidence of understanding, and gives students a chance to revise. 最後大家一齊比較，睇下邊個理由有證據支持，唔係淨係揀講得最流利嗰個。 This is student number 5. The final word is pineapple.",
+      "sha256": "83b8811469b476deeaabea6dab3a27b473b6134424f211cb628acf2b373f8143"
+    },
+    {
+      "student": 6,
+      "reference": "我覺得呢個方法唔係淨係叫學生記答案，而係要畀佢哋自己試。 For example, we can ask students to explain their prior knowledge. 我同意这个想法，但是我们还要考虑学生有没有足够的时间。 如果老師一開始就講晒個答案，佢哋可能唔會再諗點解。 The important part is formative assessment, not just getting the correct answer. 所以我會先問，你點樣知道呢個解釋係啱嘅？ 然后让他们比较两种解释，说出自己的理由，也可以修改原来的想法。 I would give feedback after listening to the explanation. 有啲同學可能識個概念，但係一時唔知點樣用英文講，咁都唔代表佢唔明。 学生可以换一种语言表达，我们应该看他的意思，而不是只看语言。 Code switching can help students connect an unfamiliar term with something they already understand. 我唔會即刻打斷佢，等佢講完先，再問返佢頭先嗰個例子。 如果例子和结论不一致，老师可以请他再解释一次。 That gives the teacher evidence of understanding, and gives students a chance to revise. 最後大家一齊比較，睇下邊個理由有證據支持，唔係淨係揀講得最流利嗰個。 This is student number 6. The final word is pineapple.",
+      "sha256": "0d1997afc39dae3263ee2a1216a482bcab1c05cd2c4692250d5ce3c01bffc95b"
+    },
+    {
+      "student": 7,
+      "reference": "我覺得呢個方法唔係淨係叫學生記答案，而係要畀佢哋自己試。 For example, we can ask students to explain their prior knowledge. 我同意这个想法，但是我们还要考虑学生有没有足够的时间。 如果老師一開始就講晒個答案，佢哋可能唔會再諗點解。 The important part is formative assessment, not just getting the correct answer. 所以我會先問，你點樣知道呢個解釋係啱嘅？ 然后让他们比较两种解释，说出自己的理由，也可以修改原来的想法。 I would give feedback after listening to the explanation. 有啲同學可能識個概念，但係一時唔知點樣用英文講，咁都唔代表佢唔明。 学生可以换一种语言表达，我们应该看他的意思，而不是只看语言。 Code switching can help students connect an unfamiliar term with something they already understand. 我唔會即刻打斷佢，等佢講完先，再問返佢頭先嗰個例子。 如果例子和结论不一致，老师可以请他再解释一次。 That gives the teacher evidence of understanding, and gives students a chance to revise. 最後大家一齊比較，睇下邊個理由有證據支持，唔係淨係揀講得最流利嗰個。 This is student number 7. The final word is pineapple.",
+      "sha256": "818caf5d21a28dcc544a4c306eb5b76317fd4ab7483090f08ee6544ddc661845"
+    },
+    {
+      "student": 8,
+      "reference": "我覺得呢個方法唔係淨係叫學生記答案，而係要畀佢哋自己試。 For example, we can ask students to explain their prior knowledge. 我同意这个想法，但是我们还要考虑学生有没有足够的时间。 如果老師一開始就講晒個答案，佢哋可能唔會再諗點解。 The important part is formative assessment, not just getting the correct answer. 所以我會先問，你點樣知道呢個解釋係啱嘅？ 然后让他们比较两种解释，说出自己的理由，也可以修改原来的想法。 I would give feedback after listening to the explanation. 有啲同學可能識個概念，但係一時唔知點樣用英文講，咁都唔代表佢唔明。 学生可以换一种语言表达，我们应该看他的意思，而不是只看语言。 Code switching can help students connect an unfamiliar term with something they already understand. 我唔會即刻打斷佢，等佢講完先，再問返佢頭先嗰個例子。 如果例子和结论不一致，老师可以请他再解释一次。 That gives the teacher evidence of understanding, and gives students a chance to revise. 最後大家一齊比較，睇下邊個理由有證據支持，唔係淨係揀講得最流利嗰個。 This is student number 8. The final word is pineapple.",
+      "sha256": "e4886843cfbf0f387a4a85dd19ac84521ff085261723fef70180611f9ffd9aa2"
+    },
+    {
+      "student": 9,
+      "reference": "我覺得呢個方法唔係淨係叫學生記答案，而係要畀佢哋自己試。 For example, we can ask students to explain their prior knowledge. 我同意这个想法，但是我们还要考虑学生有没有足够的时间。 如果老師一開始就講晒個答案，佢哋可能唔會再諗點解。 The important part is formative assessment, not just getting the correct answer. 所以我會先問，你點樣知道呢個解釋係啱嘅？ 然后让他们比较两种解释，说出自己的理由，也可以修改原来的想法。 I would give feedback after listening to the explanation. 有啲同學可能識個概念，但係一時唔知點樣用英文講，咁都唔代表佢唔明。 学生可以换一种语言表达，我们应该看他的意思，而不是只看语言。 Code switching can help students connect an unfamiliar term with something they already understand. 我唔會即刻打斷佢，等佢講完先，再問返佢頭先嗰個例子。 如果例子和结论不一致，老师可以请他再解释一次。 That gives the teacher evidence of understanding, and gives students a chance to revise. 最後大家一齊比較，睇下邊個理由有證據支持，唔係淨係揀講得最流利嗰個。 This is student number 9. The final word is pineapple.",
+      "sha256": "36a8fe0a0c901ba54e3abb635f8d8764bef10f3afe8fd5d102e238a1afff8f01"
+    },
+    {
+      "student": 10,
+      "reference": "我覺得呢個方法唔係淨係叫學生記答案，而係要畀佢哋自己試。 For example, we can ask students to explain their prior knowledge. 我同意这个想法，但是我们还要考虑学生有没有足够的时间。 如果老師一開始就講晒個答案，佢哋可能唔會再諗點解。 The important part is formative assessment, not just getting the correct answer. 所以我會先問，你點樣知道呢個解釋係啱嘅？ 然后让他们比较两种解释，说出自己的理由，也可以修改原来的想法。 I would give feedback after listening to the explanation. 有啲同學可能識個概念，但係一時唔知點樣用英文講，咁都唔代表佢唔明。 学生可以换一种语言表达，我们应该看他的意思，而不是只看语言。 Code switching can help students connect an unfamiliar term with something they already understand. 我唔會即刻打斷佢，等佢講完先，再問返佢頭先嗰個例子。 如果例子和结论不一致，老师可以请他再解释一次。 That gives the teacher evidence of understanding, and gives students a chance to revise. 最後大家一齊比較，睇下邊個理由有證據支持，唔係淨係揀講得最流利嗰個。 This is student number 10. The final word is pineapple.",
+      "sha256": "fdd59aaf96bb8edc4cb275261d3f30f9a15619dd6a95ca0e864ff8e8267ca3ea"
+    }
+  ]
+}

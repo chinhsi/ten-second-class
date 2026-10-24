@@ -19,6 +19,10 @@ export function TeacherGuide({ lang }: { lang: Lang }) {
       title: t("2. Prepare a question", "2. 準備問題"),
       items: [
         t(
+          "Choose 10 or 20 seconds. Accounts enabled by the administrator can also choose 2 minutes, for classes of up to 15 students. For mixed Cantonese, Mandarin and English, choose Auto-detect; transcripts aim to preserve the spoken languages without translation.",
+          "錄音可選 10 或 20 秒；管理員開放權限的帳號另可選 2 分鐘，最多 15 位學生。粵語、普通話、英文混合時選「自動辨識」，逐字稿會盡量保留原話、不翻譯。",
+        ),
+        t(
           "For Concept response, enter a question students can answer in one sentence. If AI feedback and scoring is enabled, add the answer points used for assessment. Students cannot see these points.",
           "選「概念作答」，輸入學生能用一句話回答的問題。開啟「AI 回饋及評分」時，填寫判斷答案的要點；學生不會看到這些要點。",
         ),
@@ -43,12 +47,12 @@ export function TeacherGuide({ lang }: { lang: Lang }) {
           "展示課堂 QR code，或按「複製加入連結」分享給學生。學生填姓名及學號即可加入；備課中也能先加入等待。",
         ),
         t(
-          "Choose Enable class, then Open beside the question. Students press Start recording, speak for up to 10 seconds, and the recording is sent automatically. They can also submit early.",
-          "先按「啟用課堂」，再按題目旁的「開放」。學生按「開始錄音」，最多說 10 秒，時間到自動送出，也能提前送出。",
+          "Choose Enable class, then Open beside the question. Students press Start recording, speak for the selected 10, 20 or 120 seconds, and the recording is sent automatically. They can also submit early.",
+          "先按「啟用課堂」，再按題目旁的「開放」。學生按「開始錄音」，按題目設定最多說 10、20 或 120 秒，時間到自動送出，也能提前送出。",
         ),
         t(
-          "Each student gets their own 10 seconds and one response per question. Close question stops new recordings; recordings already started can finish. End class when the activity is over.",
-          "每位學生都有自己的 10 秒，每題作答一次。「收題」停止新的錄音，已開始的錄音仍可完成。活動結束後按「結束課堂」。",
+          "Each student gets their own full recording time and one response per question. Close question stops new recordings; recordings already started can finish. End class when the activity is over.",
+          "每位學生都有自己的完整錄音時間，每題作答一次。「收題」停止新的錄音，已開始的錄音仍可完成。活動結束後按「結束課堂」。",
         ),
       ],
     },
@@ -121,14 +125,14 @@ export function TeacherGuide({ lang }: { lang: Lang }) {
       t("The summary has not appeared", "摘要還沒出現？"),
       t(
         "Some students may not have submitted, or recordings may still be processing. You can summarize available transcripts early. If processing failed, use Retry. The participant count covers only students who joined, not your full course roster.",
-        "可能有人未交，或錄音仍在處理。你可以先整理已有逐字稿；處理失敗時按重試。人數只計算已加入者，不等於正式修課名單。",
+        "可能有人未交，或錄音仍在處理。你可以先整理已有逐字稿；處理失敗時按「補處理未完成作答」。兩分鐘錄音若一直處理中，等待 3 分鐘後可補處理；已保存的錄音不用叫學生重錄。人數只計算已加入者，不等於正式修課名單。",
       ),
     ],
     [
       t("What are the limits?", "有哪些限制？"),
       t(
         "Each class supports up to 150 students and 80 questions. AI provides an initial interpretation and can make mistakes. Recordings are stored until the class is manually deleted; there is no automatic expiry. Follow your institution’s requirements for informing students and retaining recordings.",
-        "每課最多 150 位學生、80 題。AI 是初步判讀，也可能出錯。錄音沒有自動到期刪除，需手動刪除課堂；請依所屬機構要求告知學生並安排保存期限。",
+        "一般課堂最多 150 位學生、80 題；有兩分鐘題目的課堂最多 15 人。AI 是初步判讀，也可能出錯。錄音沒有自動到期刪除，需手動刪除課堂；請依所屬機構要求告知學生並安排保存期限。",
       ),
     ],
   ];
