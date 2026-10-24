@@ -1,7 +1,10 @@
+import { selectRecordingQuestion } from "./recordingSelection";
 import {
   saveRecording,
   loadRecording,
   deleteRecording,
+  pendingRecordings,
+  type SavedRecording,
 } from "./recordingStore";
 import { startVisiblePolling, studentPollDelay } from "./polling";
 import { retryConcurrent } from "./concurrency";
@@ -21,6 +24,7 @@ async function api(action: string, data: any = {}) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action, ...data }),
+    signal: AbortSignal.timeout(45000),
   });
   const j = await r.json();
   if (!r.ok || j.error)
@@ -1119,6 +1123,8 @@ function Student({ code, lang }: { code: string; lang: "en" | "zh" }) {
   const [info, setInfo] = useState<any>(null);
   const [state, setState] = useState<any>(null);
   const [recordingQuestion, setRecordingQuestion] = useState<any>(null);
+  const scope = JSON.stringify([code, token]);
+  const [pendingIds, setPendingIds] = useState<string[]>([]);
   const [joined, setJoined] = useState(
     localStorage.getItem("ts-joined-" + code) === "yes",
   );
@@ -1127,8 +1133,16 @@ function Student({ code, lang }: { code: string; lang: "en" | "zh" }) {
   const call = (a: string, b: any = {}) => api(a, { code, token, ...b });
   const refresh = async () => {
     try {
-      setState(await call("state"));
-      setError("");
+      const current = await call("state");
+      try {
+        setPendingIds(await pendingRecordings(scope));
+        setError("");
+      } catch {
+        setError(
+          "無法讀取本機待交錄音，請保持原分頁並重試，勿清除瀏覽資料。 / Cannot restore saved recordings yet.",
+        );
+      }
+      setState(current);
     } catch (e) {
       if ((e as any).code === "REJOIN") {
         localStorage.removeItem("ts-joined-" + code);
@@ -1151,18 +1165,12 @@ function Student({ code, lang }: { code: string; lang: "en" | "zh" }) {
       () => studentPollDelay(studentPolling.current),
     );
   }, [joined, code]);
-  const q =
-    recordingQuestion ||
-    state?.questions.find(
-      (question: any) =>
-        savedRecording(question.id) &&
-        !state.responses.some(
-          (r: any) => r.question_id === question.id && r.status !== "recording",
-        ),
-    ) ||
-    (state?.class.status === "active"
-      ? state?.questions.find((q: any) => q.status === "active")
-      : null);
+  const q = selectRecordingQuestion(
+    state,
+    recordingQuestion,
+    pendingIds,
+    savedRecording,
+  );
   return (
     <main className="student">
       <div className="eyebrow">YOUR VOICE MATTERS</div>
@@ -1233,13 +1241,15 @@ function Student({ code, lang }: { code: string; lang: "en" | "zh" }) {
             <Recorder
               key={q.id}
               q={q}
+              scope={scope}
               lang={lang}
               call={call}
               response={state?.responses.find(
                 (r: any) => r.question_id === q.id,
               )}
               onRecording={() => setRecordingQuestion(q)}
-              onDiscard={() => {
+              onDiscard={async () => {
+                await refresh();
                 setRecordingQuestion(null);
                 // Removing sessionStorage alone does not trigger a parent render.
                 setState((current: any) => ({ ...current }));
@@ -1316,6 +1326,7 @@ function Student({ code, lang }: { code: string; lang: "en" | "zh" }) {
 }
 function Recorder({
   q,
+  scope,
   lang,
   call,
   response,
@@ -1324,12 +1335,13 @@ function Recorder({
   onDiscard,
 }: {
   q: any;
+  scope: string;
   lang: "en" | "zh";
   call: (a: string, b?: any) => Promise<any>;
   response: any;
   onSubmitted: () => Promise<void>;
   onRecording: () => void;
-  onDiscard: () => void;
+  onDiscard: () => Promise<void>;
 }) {
   const t = (en: string, zh: string) => tx(lang, en, zh);
   const [phase, setPhase] = useState(() =>
@@ -1337,15 +1349,16 @@ function Recorder({
   );
   const limit = q.max_seconds === 120 ? 120 : q.max_seconds === 20 ? 20 : 10;
   const [left, setLeft] = useState(limit);
+  const [restoreTick, setRestoreTick] = useState(0);
   const [error, setError] = useState("");
-  const [pending, setPending] = useState<string | Blob | null>(() =>
+  const [pending, setPending] = useState<string | SavedRecording | null>(() =>
     savedRecording(q.id) === "idb" ? null : savedRecording(q.id),
   );
   useEffect(() => {
     if (limit !== 120) return;
     let cancelled = false;
     setPhase("restoring");
-    loadRecording(q.id)
+    loadRecording(scope, q.id, response?.recording_version)
       .then((blob) => {
         if (cancelled) return;
         if (blob) {
@@ -1354,12 +1367,17 @@ function Recorder({
         } else setPhase("idle");
       })
       .catch(() => {
-        if (!cancelled) setPhase("idle");
+        if (!cancelled) {
+          setError(
+            "讀取錄音暫存失敗，請重試，勿重新錄製。 / Could not restore recording; retry first.",
+          );
+          setPhase("restore_failed");
+        }
       });
     return () => {
       cancelled = true;
     };
-  }, [q.id]);
+  }, [q.id, scope, restoreTick]);
   const recorder = useRef<MediaRecorder | null>(null);
   const stream = useRef<MediaStream | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -1373,17 +1391,22 @@ function Recorder({
       stream.current?.getTracks().forEach((t) => t.stop());
     };
   }, []);
-  async function upload(audio: string | Blob) {
+  async function upload(audio: string | SavedRecording) {
     setPhase("sending");
     try {
-      if (audio instanceof Blob) {
-        const ticket = await call("upload_ticket", { questionId: q.id });
+      if (typeof audio !== "string") {
+        if (audio.nextVersion)
+          throw Error("捨棄尚未確認，請再按捨棄完成確認，不能提交舊錄音。");
+        const ticket = await call("upload_ticket", {
+          questionId: q.id,
+          version: audio.version,
+        });
         if (!ticket.received) {
           if (!ticket.uploaded) {
             const uploaded = await fetch(ticket.signedUrl, {
               method: "PUT",
               headers: { "Content-Type": "audio/wav" },
-              body: audio,
+              body: audio.blob,
               signal: AbortSignal.timeout(60000),
             });
             if (
@@ -1397,9 +1420,12 @@ function Recorder({
           }
           // A lost first acknowledgement can leave an immutable file already
           // stored. Confirmation validates that file, never overwrites it.
-          await call("submit_saved", { questionId: q.id });
+          await call("submit_saved", {
+            questionId: q.id,
+            version: audio.version,
+          });
         }
-        await deleteRecording(q.id).catch(() => {});
+        await deleteRecording(scope, q.id, audio).catch(() => {});
       } else await call("submit", { questionId: q.id, audio });
       setPhase("sent");
       setPending(null);
@@ -1465,16 +1491,20 @@ function Recorder({
           );
           if (wav.size < 8044) throw Error("Please say at least one sentence.");
           if (limit === 120) {
-            setPending(wav);
+            const saved: SavedRecording = {
+              blob: wav,
+              version: ticket.recording_version,
+              responseId: ticket.id,
+            };
+            setPending(saved);
             try {
-              await saveRecording(q.id, wav);
-              sessionStorage.setItem(pendingKey(q.id), "idb");
+              await saveRecording(scope, q.id, saved);
             } catch {
               setError(
                 "暫存未完成，請保持本頁開啟直到上傳成功。 / Keep this page open until upload succeeds.",
               );
             }
-            await upload(wav);
+            await upload(saved);
             return;
           }
           const bytes = new Uint8Array(await wav.arrayBuffer());
@@ -1554,27 +1584,75 @@ function Recorder({
           ) : (
             <button
               className="record-button"
-              disabled={phase !== "idle"}
-              onClick={start}
+              disabled={phase !== "idle" && phase !== "restore_failed"}
+              onClick={() =>
+                phase === "restore_failed"
+                  ? setRestoreTick((x) => x + 1)
+                  : start()
+              }
             >
-              {phase === "permission"
-                ? t("Opening microphone…", "正在開啟麥克風…")
-                : phase === "sending"
-                  ? t("Uploading…", "正在送出…")
-                  : t("● Start recording", "● 開始錄音")}
+              {phase === "restore_failed"
+                ? t("Retry restoring recording", "重試讀取錄音")
+                : phase === "permission"
+                  ? t("Opening microphone…", "正在開啟麥克風…")
+                  : phase === "sending"
+                    ? t("Uploading…", "正在送出…")
+                    : t("● Start recording", "● 開始錄音")}
             </button>
           )}
           {phase === "retry" && (
             <button
               className="quiet"
               onClick={async () => {
-                if (confirm("Discard this recording and continue?")) {
-                  await deleteRecording(q.id).catch(() => {});
+                if (
+                  !confirm(t("Discard this recording?", "確定捨棄這段錄音？"))
+                )
+                  return;
+                setPhase("discarding");
+                try {
+                  if (pending && typeof pending !== "string") {
+                    const intent = {
+                      ...pending,
+                      nextVersion: pending.nextVersion || crypto.randomUUID(),
+                    };
+                    setPending(intent);
+                    // Persist intent before the network call; a lost ACK/reload
+                    // retries the same rotation rather than invalidating a new take.
+                    await saveRecording(scope, q.id, intent);
+                    try {
+                      await call("discard_recording", {
+                        questionId: q.id,
+                        version: intent.version,
+                        nextVersion: intent.nextVersion,
+                      });
+                    } catch (e) {
+                      // Server has confirmed this version is retired or accepted.
+                      // Delete only this local version, never another tab's new take.
+                      if (
+                        !["STALE_RECORDING", "ALREADY_RECEIVED"].includes(
+                          (e as any).code,
+                        )
+                      )
+                        throw e;
+                    }
+                    await deleteRecording(scope, q.id, intent);
+                  }
                   sessionStorage.removeItem(pendingKey(q.id));
-                  setPending(null);
-                  setPhase("idle");
+                  const remaining =
+                    limit === 120
+                      ? await loadRecording(
+                          scope,
+                          q.id,
+                          response?.recording_version,
+                        )
+                      : null;
+                  setPending(remaining || null);
+                  setPhase(remaining ? "retry" : "idle");
                   setError("");
-                  onDiscard();
+                  await onDiscard();
+                } catch (e) {
+                  setError((e as Error).message);
+                  setPhase("retry");
                 }
               }}
             >

@@ -111,7 +111,7 @@ def live():
   def prepare(i):
    call('join',code=code,token=tokens[i],name=f'Synthetic {i+1}',studentId=f'READINESS-{i+1}')
    ticket=call('start',code=code,token=tokens[i],questionId=qid)
-   signed=call('upload_ticket',code=code,token=tokens[i],questionId=qid)
+   signed=call('upload_ticket',code=code,token=tokens[i],questionId=qid,version=ticket['recording_version'])
    return ticket,signed
   with concurrent.futures.ThreadPoolExecutor(max_workers=10) as pool:prepared=list(pool.map(prepare,range(10)))
   report['checks']['teacher_and_permission']=True
@@ -120,7 +120,7 @@ def live():
    ticket,signed=prepared[i];start=time.monotonic()
    m.request(signed['signedUrl'],(AUDIO/f'{i+1:02}.wav').read_bytes(),{'Content-Type':'audio/wav'},method='PUT',timeout=90)
    uploaded=time.monotonic()
-   call('submit_saved',code=code,token=tokens[i],questionId=qid)
+   call('submit_saved',code=code,token=tokens[i],questionId=qid,version=ticket['recording_version'])
    return {'student':i+1,'id':ticket['id'],'upload_seconds':round(uploaded-start,3),'confirmation_seconds':round(time.monotonic()-uploaded,3),'submitted_elapsed_seconds':round(time.monotonic()-started,3)}
   with concurrent.futures.ThreadPoolExecutor(max_workers=10) as pool:report['clients']=list(pool.map(one,range(10)))
   deadline=time.monotonic()+180
@@ -145,19 +145,19 @@ def live():
   report['checks']['mixed_language_markers']=all(r['cantonese_preserved'] and r['english_terms_preserved'] for r in rows)
   # Duplicate submission must not restart a completed recording.
   first=rows[0]; index=next(i for i,t in enumerate(prepared) if t[0]['id']==first['id'])
-  call('submit_saved',code=code,token=tokens[index],questionId=qid)
+  call('submit_saved',code=code,token=tokens[index],questionId=qid,version=prepared[index][0]['recording_version'])
   same=rest('ts_responses',query=f"id=eq.{first['id']}&select=processing_completed_at")[0]
   assert same['processing_completed_at']==first['processing_completed_at'];report['checks']['duplicate_no_restart']=True
   dashboard=call('dashboard',owner=owner,classId=cid);assert len(dashboard['responses'])==10
   audio=call('audio',owner=owner,id=first['id']);assert audio.get('signedUrl');report['checks']['teacher_dashboard_audio']=True
   # Recovery on separate silent audio: no additional paid inference or alteration of real responses.
   recovery=call('save_question',**qdata,maxSeconds=120);rid=recovery['id'];call('open_question',owner=owner,classId=cid,id=rid)
-  ticket=call('start',code=code,token=tokens[0],questionId=rid);signed=call('upload_ticket',code=code,token=tokens[0],questionId=rid)
+  ticket=call('start',code=code,token=tokens[0],questionId=rid);signed=call('upload_ticket',code=code,token=tokens[0],questionId=rid,version=ticket['recording_version'])
   buf=io.BytesIO()
   with wave.open(buf,'wb') as w:w.setnchannels(1);w.setsampwidth(2);w.setframerate(16000);w.writeframes(b'\0'*32000)
   m.request(signed['signedUrl'],buf.getvalue(),{'Content-Type':'audio/wav'},method='PUT')
   # Normal saved submission followed by two isolated failed/expired-state recovery checks.
-  call('submit_saved',code=code,token=tokens[0],questionId=rid)
+  call('submit_saved',code=code,token=tokens[0],questionId=rid,version=ticket['recording_version'])
   def wait_done():
    for _ in range(35):
     row=rest('ts_responses',query=f"id=eq.{ticket['id']}&select=*")[0]

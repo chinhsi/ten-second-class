@@ -82,10 +82,17 @@ test("two-minute WAV survives IndexedDB, reload and lost upload acknowledgement"
     // Distinct ending samples prove the final second was not truncated.
     for (let i = n - 16000; i < n; i++) v.setInt16(44 + i * 2, 1000, true);
     const wav = await recordingToWav(new Blob([a], { type: "audio/wav" }), 120);
-    await saveRecording("long-q", wav);
+    await saveRecording(JSON.stringify(["LONG", "a".repeat(64)]), "long-q", {
+      blob: wav,
+      version: null,
+      responseId: "r",
+    });
     sessionStorage.setItem("ts-recording-long-q", "idb");
-    const restored = await loadRecording("long-q");
-    const bytes = await restored!.arrayBuffer();
+    const restored = await loadRecording(
+      JSON.stringify(["LONG", "a".repeat(64)]),
+      "long-q",
+    );
+    const bytes = await restored!.blob.arrayBuffer();
     return {
       size: bytes.byteLength,
       last: new DataView(bytes).getInt16(bytes.byteLength - 2, true),
@@ -104,7 +111,10 @@ test("two-minute WAV survives IndexedDB, reload and lost upload acknowledgement"
   const pending = await page.evaluate(async () => {
     const { loadRecording } =
       await import("/ten-second-class/src/recordingStore.ts");
-    return !!(await loadRecording("long-q"));
+    return !!(await loadRecording(
+      JSON.stringify(["LONG", "a".repeat(64)]),
+      "long-q",
+    ));
   });
   expect(pending).toBe(false);
 });

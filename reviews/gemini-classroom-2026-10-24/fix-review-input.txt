@@ -1,0 +1,125 @@
+<USER_REQUEST>
+Review this bug fix. No tools, files, edits or planning. Return at most 3 concrete correctness bugs with trigger and fix, or no confirmed bugs. Versions are UUIDs bound to each recording, client persists nextVersion before discard and retries same transition. Inspect races and recovery. Code:
+      const r = check(
+        await db
+          .from("ts_responses")
+          .select("*")
+          .eq("question_id", q.id)
+          .eq("member_id", member.id)
+          .single(),
+      );
+      // New clients bind every operation to the version saved with the audio.
+      // Versionless old clients are accepted only for a legacy NULL version.
+      const version = recordingVersion(
+        b.version === undefined && r.recording_version === null
+          ? null
+          : b.version,
+      );
+      const stale = () =>
+        reply(
+          {
+            error: "這段錄音已被捨棄或更新，不能提交舊版本；請重新整理。",
+            code: "STALE_RECORDING",
+          },
+          409,
+        );
+      if (action === "discard_recording") {
+        const next = recordingVersion(b.nextVersion);
+        if (!next || next === version) throw Error("新錄音版本無效");
+        if (r.recording_version === next)
+          return reply({ discarded: true, version: next });
+        if (r.recording_version !== version) return stale();
+        if (r.status !== "recording")
+          return reply(
+            {
+              error: "錄音已收件，未捨棄；請查看處理結果。",
+              code: "ALREADY_RECEIVED",
+            },
+            409,
+          );
+        const rotated = check(
+          await matchVersion(
+            db
+              .from("ts_responses")
+              .update({
+                recording_version: next,
+                started_at: new Date().toISOString(),
+              })
+              .eq("id", r.id)
+              .eq("status", "recording"),
+            version,
+          ).select("id"),
+        );
+        if (!rotated.length) return stale();
+
+<truncated 5154 bytes>
+ pair = JSON.parse(String(k));
+      return Array.isArray(pair) &&
+        pair.length === 4 &&
+        pair[0] === scope &&
+        typeof pair[1] === "string"
+        ? [pair[1]]
+        : [];
+    } catch {
+      return [];
+    }
+  });
+}
+// A late acknowledgement from another tab must not erase a newer recording.
+export async function deleteRecording(
+  scope: string,
+  id: string,
+  expected: SavedRecording,
+): Promise<void> {
+  const db = await open();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("pending", "readwrite");
+    const s = tx.objectStore("pending");
+    const r = s.get(key(scope, id, expected));
+    r.onsuccess = () => {
+      const current = r.result as SavedRecording | undefined;
+      if (
+        current?.version === expected.version &&
+        current?.responseId === expected.responseId
+      )
+        s.delete(key(scope, id, expected));
+    };
+    tx.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    tx.onerror = tx.onabort = () => {
+      db.close();
+      reject(tx.error);
+    };
+  });
+}
+export function selectRecordingQuestion(
+  state: any,
+  recordingQuestion: any,
+  pendingIds: string[],
+  savedShort: (id: string) => unknown,
+) {
+  return (
+    recordingQuestion ||
+    state?.questions.find(
+      (q: any) =>
+        (pendingIds.includes(q.id) ||
+          (q.max_seconds !== 120 && savedShort(q.id))) &&
+        !state.responses.some(
+          (r: any) => r.question_id === q.id && r.status !== "recording",
+        ),
+    ) ||
+    (state?.class.status === "active"
+      ? state.questions.find((q: any) => q.status === "active")
+      : null)
+  );
+}
+
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-24T11:49:23+08:00.
+</ADDITIONAL_METADATA>
+<USER_SETTINGS_CHANGE>
+The user changed setting `Model Selection` from None to Gemini 4 Argon (Low). No need to comment on this change if the user doesn't ask about it. If reporting what model you are, please use a human readable name instead of the exact string.
+</USER_SETTINGS_CHANGE>

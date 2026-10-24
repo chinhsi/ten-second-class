@@ -1,0 +1,21 @@
+{
+  "baseline": [
+    {
+      "status": "done",
+      "count": 28
+    }
+  ],
+  "checks": [
+    "Discard after successful PUT; lost-ack retry is idempotent",
+    "Old submission rejected; new 2-second file accepted and processed without AI",
+    "Accepted recording protected; duplicate requests do not restart processing"
+  ],
+  "passed": true,
+  "after_cleanup": [
+    {
+      "status": "done",
+      "count": 28
+    }
+  ],
+  "cleanup": "Temporary class/audio/teacher removed; baseline unchanged"
+}

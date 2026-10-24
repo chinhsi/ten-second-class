@@ -1,3 +1,8 @@
+import {
+  recordingVersion,
+  recordingFile,
+  matchVersion,
+} from "./recordingVersion.ts";
 import { assessmentRequest } from "./assessmentRequest.ts";
 import {
   recordingSeconds,
@@ -791,7 +796,7 @@ Deno.serve(async (req) => {
         await db
           .from("ts_responses")
           .select(
-            "id,question_id,status,result,started_at,submitted_at,worker_claimed_at",
+            "id,question_id,status,result,started_at,submitted_at,worker_claimed_at,recording_version",
           )
           .eq("member_id", member.id),
       );
@@ -847,13 +852,20 @@ Deno.serve(async (req) => {
         check(
           await db
             .from("ts_responses")
-            .insert({ question_id: q.id, member_id: member.id })
+            .insert({
+              question_id: q.id,
+              member_id: member.id,
+              recording_version:
+                recordingSeconds(q) === 120 ? crypto.randomUUID() : null,
+            })
             .select()
             .single(),
         ),
       );
     }
-    if (action === "upload_ticket" || action === "submit_saved") {
+    if (
+      ["upload_ticket", "submit_saved", "discard_recording"].includes(action)
+    ) {
       if (recordingSeconds(q) !== 120) throw Error("本題不使用長錄音上傳");
       const r = check(
         await db
@@ -863,23 +875,96 @@ Deno.serve(async (req) => {
           .eq("member_id", member.id)
           .single(),
       );
+      // New clients bind every operation to the version saved with the audio.
+      // Versionless old clients are accepted only for a legacy NULL version.
+      const version = recordingVersion(
+        b.version === undefined && r.recording_version === null
+          ? null
+          : b.version,
+      );
+      const stale = () =>
+        reply(
+          {
+            error: "這段錄音已被捨棄或更新，不能提交舊版本；請重新整理。",
+            code: "STALE_RECORDING",
+          },
+          409,
+        );
+      if (action === "discard_recording") {
+        const next = recordingVersion(b.nextVersion);
+        if (!next || next === version) throw Error("新錄音版本無效");
+        const cleanRetired = () =>
+          EdgeRuntime.waitUntil(
+            db.storage
+              .from("ten-second-audio")
+              .remove([
+                `${cls.id}/${q.id}/${member.id}/${recordingFile(r.id, version)}`,
+              ]),
+          );
+        if (r.recording_version === next) {
+          cleanRetired();
+          return reply({ discarded: true, version: next });
+        }
+        if (r.recording_version !== version) return stale();
+        if (r.status !== "recording")
+          return reply(
+            {
+              error: "錄音已收件，未捨棄；請查看處理結果。",
+              code: "ALREADY_RECEIVED",
+            },
+            409,
+          );
+        const rotated = check(
+          await matchVersion(
+            db
+              .from("ts_responses")
+              .update({
+                recording_version: next,
+                started_at: new Date().toISOString(),
+              })
+              .eq("id", r.id)
+              .eq("status", "recording"),
+            version,
+          ).select("id"),
+        );
+        if (!rotated.length) {
+          const current = check(
+            await db
+              .from("ts_responses")
+              .select("recording_version")
+              .eq("id", r.id)
+              .single(),
+          );
+          if (current.recording_version === next) {
+            cleanRetired();
+            return reply({ discarded: true, version: next });
+          }
+          return stale();
+        }
+        // Old signed URLs address only the retired version. A late PUT can
+        // leave a private orphan, but cannot be accepted; class deletion cleans it.
+        cleanRetired();
+        return reply({ discarded: true, version: next });
+      }
+      if (r.recording_version !== version) return stale();
       if (r.status !== "recording") {
         if (!r.path) throw Error("錄音已取消");
         return reply({ ok: true, received: true });
       }
       if (Date.now() - Date.parse(r.started_at) > 86400000)
         throw Error("錄音已超過24小時");
-      const path = `${cls.id}/${q.id}/${member.id}/${r.id}.wav`;
+      const filename = recordingFile(r.id, version);
+      const path = `${cls.id}/${q.id}/${member.id}/${filename}`;
       if (action === "upload_ticket") {
         const existing = check(
           await db.storage
             .from("ten-second-audio")
             .list(`${cls.id}/${q.id}/${member.id}`, {
-              search: `${r.id}.wav`,
+              search: filename,
               limit: 10,
             }),
         );
-        if (existing.some((f: any) => f.name === `${r.id}.wav`))
+        if (existing.some((f: any) => f.name === filename))
           return reply({ uploaded: true });
         const signed = check(
           await db.storage.from("ten-second-audio").createSignedUploadUrl(path),
@@ -893,26 +978,34 @@ Deno.serve(async (req) => {
       try {
         validateWav(bytes, 120);
       } catch (e) {
-        await db.storage.from("ten-second-audio").remove([path]);
-        throw e;
+        // Do not delete an immutable path while concurrent confirmations may
+        // still reference it. Explicit discard rotates before cleaning up.
+        throw Error("錄音格式無效，請捨棄這段錄音後重新錄製。");
       }
       const accepted = check(
-        await db
-          .from("ts_responses")
-          .update({
-            status: "queued",
-            path,
-            submitted_at: new Date().toISOString(),
-          })
-          .eq("id", r.id)
-          .eq("status", "recording")
-          .select(),
+        await matchVersion(
+          db
+            .from("ts_responses")
+            .update({
+              status: "queued",
+              path,
+              submitted_at: new Date().toISOString(),
+            })
+            .eq("id", r.id)
+            .eq("status", "recording"),
+          version,
+        ).select(),
       );
       if (accepted.length) EdgeRuntime.waitUntil(queue.wake());
       else {
         const current = check(
-          await db.from("ts_responses").select("path").eq("id", r.id).single(),
+          await db
+            .from("ts_responses")
+            .select("path,recording_version")
+            .eq("id", r.id)
+            .single(),
         );
+        if (current.recording_version !== version) return stale();
         if (!current.path) throw Error("錄音已取消，尚未收到");
       }
       return reply({ ok: true, received: true });
