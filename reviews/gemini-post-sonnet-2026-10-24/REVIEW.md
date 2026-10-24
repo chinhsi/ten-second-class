@@ -19,6 +19,8 @@ Baseline d660131. Two independent AGY requests using gemini-4-argon-low, effort 
 - Database migration applied; rollback-only live guard fixture: pass.
 - Edge Function deployed ACTIVE version 30.
 - Security advisors: no finding names the new invoker trigger; existing shared-project Interact/Auth warnings remain outside this change. Ten-second tables intentionally deny direct client access through RLS and use the authenticated Edge service flow. Advisor reference: https://supabase.com/docs/guides/database/database-linter
-- Live silent recovery suite and Pages deployment recorded below when complete.
+- Live silent recovery suite: all five checks passed; temporary teacher/class/audio removed; original 28 done responses unchanged.
+- Application commit 31e193b pushed; Pages workflow 40067276896.
+- Local migration filename aligned with MCP-applied remote version 20261024054032 to prevent duplicate application.
 
 Lock semantics reference: https://www.postgresql.org/docs/current/explicit-locking.html
