@@ -1,0 +1,330 @@
+獨立程式複核：不要使用工具、讀檔、寫檔、規劃或修改。只看附上的當前程式。最多3個具體可重現的bug，列位置、觸發順序、影響、既有防護為何無效及最小修法；沒有確認問題就明說，不湊數。直接交完整繁體中文結論，800字內；不要長篇推理。基線d660131。
+範圍：刪除課堂的交易保護、錄音內容hash與version CAS。教師owner驗證和class ownership在此handler之前完成；只看此範圍，勿把未附片段當缺失。前端每份新錄音存SHA256、IDB鍵包含digest，舊客戶端rolling部署可不帶digest；新端每次都帶。class deletion中storage.collect在RPC成功後執行，最後刪classes cascade。確認busy時交易回滾和同版本不同內容不被ACK。
+
+FILE supabase/functions/ten-second/index.ts
+298:     if (action === "delete_class") {
+299:       const id = str(b.classId, 40);
+300:       if (!/^[a-f0-9-]{36}$/.test(id)) throw Error("課堂資料不正確");
+301:       async function collect(prefix: string): Promise<string[]> {
+302:         const paths: string[] = [];
+303:         for (let offset = 0; ; offset += 100) {
+304:           const files = check(
+305:             await db.storage
+306:               .from("ten-second-audio")
+307:               .list(prefix, { limit: 100, offset }),
+308:           );
+309:           for (const f of files) {
+310:             const path = prefix + "/" + f.name;
+311:             if (f.id) paths.push(path);
+312:             else paths.push(...(await collect(path)));
+313:           }
+314:           if (files.length < 100) break;
+315:         }
+316:         return paths;
+317:       }
+318:       const prepared = await db.rpc("ts_prepare_class_delete", { target: id });
+319:       if (prepared.error?.code === "P0001")
+320:         throw Error("仍有錄音在處理，未刪除或取消任何錄音；請稍後再試。");
+321:       check(prepared);
+322:       const paths = await collect(id);
+323:       for (let i = 0; i < paths.length; i += 100)
+324:         check(
+325:           await db.storage
+326:             .from("ten-second-audio")
+327:             .remove(paths.slice(i, i + 100)),
+328:         );
+329:       check(await db.from("ts_classes").delete().eq("id", id));
+330:       return reply({ ok: true });
+331:     }
+332:     if (action === "classes") {
+333:       const query = db
+334:         .from("ts_classes")
+335:         .select("*")
+336:         .order("created_at", { ascending: false });
+337:       return reply(
+338:         check(
+
+FILE supabase/functions/ten-second/index.ts
+783:     const q = check(
+784:       await db
+785:         .from("ts_questions")
+786:         .select("*")
+787:         .eq("id", b.questionId)
+788:         .eq("class_id", cls.id)
+789:         .single(),
+790:     );
+791:     if (action === "start") {
+792:       if (cls.status !== "active" || q.status !== "active")
+793:         throw Error("老師尚未開放這一題");
+794:       const old = check(
+795:         await db
+796:           .from("ts_responses")
+797:           .select("*")
+798:           .eq("question_id", q.id)
+799:           .eq("member_id", member.id)
+800:           .maybeSingle(),
+801:       );
+802:       if (old) {
+803:         if (old.status !== "recording") throw Error("本題已提交");
+804:         if (Date.now() - Date.parse(old.started_at) > 110000) {
+805:           const reset = check(
+806:             await db
+807:               .from("ts_responses")
+808:               .update({ started_at: new Date().toISOString() })
+809:               .eq("id", old.id)
+810:               .eq("status", "recording")
+811:               .select()
+812:               .maybeSingle(),
+813:           );
+814:           if (!reset) throw Error("本題已提交");
+815:           return reply(reset);
+816:         }
+817:         return reply(old);
+818:       }
+819:       return reply(
+820:         check(
+821:           await db
+822:             .from("ts_responses")
+823:             .insert({
+824:               question_id: q.id,
+825:               member_id: member.id,
+826:               recording_version:
+827:                 recordingSeconds(q) === 120 ? crypto.randomUUID() : null,
+828:             })
+829:             .select()
+830:             .single(),
+831:         ),
+832:       );
+833:     }
+834:     if (
+835:       ["upload_ticket", "submit_saved", "discard_recording"].includes(action)
+836:     ) {
+837:       if (recordingSeconds(q) !== 120) throw Error("本題不使用長錄音上傳");
+838:       const r = check(
+839:         await db
+840:           .from("ts_responses")
+841:           .select("*")
+842:           .eq("question_id", q.id)
+843:           .eq("member_id", member.id)
+844:           .single(),
+845:       );
+846:       // New clients bind every operation to the version saved with the audio.
+847:       // Versionless old clients are accepted only for a legacy NULL version.
+848:       const version = recordingVersion(
+849:         b.version === undefined && r.recording_version === null
+850:           ? null
+851:           : b.version,
+852:       );
+853:       const stale = () =>
+854:         reply(
+855:           {
+856:             error: "這段錄音已被捨棄或更新，不能提交舊版本；請重新整理。",
+857:             code: "STALE_RECORDING",
+858:           },
+859:           409,
+860:         );
+861:       if (action === "discard_recording") {
+862:         const next = recordingVersion(b.nextVersion);
+863:         if (!next || next === version) throw Error("新錄音版本無效");
+864:         const cleanRetired = () =>
+865:           EdgeRuntime.waitUntil(
+866:             db.storage
+867:               .from("ten-second-audio")
+868:               .remove([
+869:                 `${cls.id}/${q.id}/${member.id}/${recordingFile(r.id, version)}`,
+870:               ]),
+871:           );
+872:         if (r.recording_version === next) {
+873:           cleanRetired();
+874:           return reply({ discarded: true, version: next });
+875:         }
+876:         if (r.recording_version !== version) return stale();
+877:         if (r.status !== "recording")
+878:           return reply(
+879:             {
+880:               error: "錄音已收件，未捨棄；請查看處理結果。",
+881:               code: "ALREADY_RECEIVED",
+882:             },
+883:             409,
+884:           );
+885:         const rotated = check(
+886:           await matchVersion(
+887:             db
+888:               .from("ts_responses")
+889:               .update({
+890:                 recording_version: next,
+891:                 started_at: new Date().toISOString(),
+892:               })
+893:               .eq("id", r.id)
+894:               .eq("status", "recording"),
+895:             version,
+896:           ).select("id"),
+897:         );
+898:         if (!rotated.length) {
+899:           const current = check(
+900:             await db
+901:               .from("ts_responses")
+902:               .select("recording_version")
+903:               .eq("id", r.id)
+904:               .single(),
+905:           );
+906:           if (current.recording_version === next) {
+907:             cleanRetired();
+908:             return reply({ discarded: true, version: next });
+909:           }
+910:           return stale();
+911:         }
+912:         // Old signed URLs address only the retired version. A late PUT can
+913:         // leave a private orphan, but cannot be accepted; class deletion cleans it.
+914:         cleanRetired();
+915:         return reply({ discarded: true, version: next });
+916:       }
+917:       if (r.recording_version !== version) return stale();
+918:       const digest = b.digest;
+919:       if (
+920:         digest !== undefined &&
+921:         (typeof digest !== "string" || !/^[a-f0-9]{64}$/.test(digest))
+922:       )
+923:         throw Error("錄音內容識別碼無效");
+924:       const filename = recordingFile(r.id, version);
+925:       const path = `${cls.id}/${q.id}/${member.id}/${filename}`;
+926:       const verifyContent = async (bytes?: Uint8Array) => {
+927:         if (digest === undefined) return; // rolling deployment / legacy client
+928:         const data =
+929:           bytes ||
+930:           new Uint8Array(
+931:             await check(
+932:               await db.storage.from("ten-second-audio").download(path),
+933:             ).arrayBuffer(),
+934:           );
+935:         const hash = Array.from(
+936:           new Uint8Array(await crypto.subtle.digest("SHA-256", data)),
+937:         )
+938:           .map((x) => x.toString(16).padStart(2, "0"))
+939:           .join("");
+940:         if (hash !== digest)
+941:           throw Error(
+942:             "已收到另一個分頁的不同錄音；這份仍保留在本機，請找老師確認或捨棄這份。 / A different recording was received from another tab. This copy remains on this device.",
+943:           );
+944:       };
+945:       if (r.status !== "recording") {
+946:         if (!r.path) throw Error("錄音已取消");
+947:         await verifyContent();
+948:         return reply({ ok: true, received: true });
+949:       }
+950:       if (Date.now() - Date.parse(r.started_at) > 86400000)
+951:         throw Error("錄音已超過24小時");
+952:       if (action === "upload_ticket") {
+953:         const existing = check(
+954:           await db.storage
+955:             .from("ten-second-audio")
+956:             .list(`${cls.id}/${q.id}/${member.id}`, {
+957:               search: filename,
+958:               limit: 10,
+959:             }),
+960:         );
+961:         if (existing.some((f: any) => f.name === filename)) {
+962:           await verifyContent();
+963:           return reply({ uploaded: true });
+964:         }
+965:         const signed = check(
+966:           await db.storage.from("ten-second-audio").createSignedUploadUrl(path),
+967:         );
+968:         return reply({ signedUrl: signed.signedUrl });
+969:       }
+970:       const file = check(
+971:         await db.storage.from("ten-second-audio").download(path),
+972:       );
+973:       const bytes = new Uint8Array(await file.arrayBuffer());
+974:       await verifyContent(bytes);
+975:       try {
+976:         validateWav(bytes, 120);
+977:       } catch (e) {
+978:         // Do not delete an immutable path while concurrent confirmations may
+979:         // still reference it. Explicit discard rotates before cleaning up.
+980:         throw Error("錄音格式無效，請捨棄這段錄音後重新錄製。");
+981:       }
+982:       const accepted = check(
+983:         await matchVersion(
+984:           db
+985:             .from("ts_responses")
+986:             .update({
+987:               status: "queued",
+988:               path,
+989:               submitted_at: new Date().toISOString(),
+990:             })
+991:             .eq("id", r.id)
+992:             .eq("status", "recording"),
+993:           version,
+994:         ).select(),
+995:       );
+996:       if (accepted.length) EdgeRuntime.waitUntil(queue.wake());
+997:       else {
+998:         const current = check(
+999:           await db
+1000:             .from("ts_responses")
+1001:             .select("path,recording_version")
+1002:             .eq("id", r.id)
+1003:             .single(),
+1004:         );
+1005:         if (current.recording_version !== version) return stale();
+1006:         if (!current.path) throw Error("錄音已取消，尚未收到");
+1007:       }
+1008:       return reply({ ok: true, received: true });
+1009:     }
+1010:     if (action === "submit") {
+1011:       if (recordingSeconds(q) === 120) throw Error("請使用長錄音上傳");
+1012:       const r = check(
+1013:         await db
+1014:           .from("ts_responses")
+1015:           .select("*")
+1016:           .eq("question_id", q.id)
+1017:           .eq("member_id", member.id)
+1018:           .single(),
+
+FILE supabase/functions/ten-second/recordingVersion.ts
+1: export function recordingVersion(value: unknown): string | null {
+2:   if (value === null) return null;
+3:   if (
+4:     typeof value === "string" &&
+5:     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+6:       value,
+7:     )
+8:   )
+9:     return value.toLowerCase();
+10:   throw Error(
+11:     "錄音版本無效，請重新整理頁面 / Refresh this page to update recording support",
+12:   );
+13: }
+14: export function recordingFile(id: string, version: string | null) {
+15:   return `${id}${version ? `-${version}` : ""}.wav`;
+16: }
+17: export function matchVersion(query: any, version: string | null) {
+18:   return version === null
+19:     ? query.is("recording_version", null)
+20:     : query.eq("recording_version", version);
+21: }
+
+FILE supabase/migrations/20261024041016_safe_class_delete.sql
+1: begin;
+2: create or replace function public.ts_prepare_class_delete(target uuid)
+3: returns void language plpgsql security definer set search_path = '' as $$
+4: begin
+5:   -- Lock/cancel recording rows before checking workers. Concurrent submission
+6:   -- either wins first and is detected below, or loses its recording-status CAS.
+7:   -- Raising rolls back ALL cancellation and class/question status updates.
+8:   update public.ts_classes set status='ended' where id=target;
+9:   update public.ts_questions set status='closed' where class_id=target;
+10:   update public.ts_responses set status='failed'
+11:     where question_id in (select id from public.ts_questions where class_id=target)
+12:       and status='recording';
+13:   if exists(select 1 from public.ts_responses r join public.ts_questions q on q.id=r.question_id
+14:     where q.class_id=target and r.status in ('queued','processing')) then
+15:     raise exception '仍有錄音在處理，未刪除或取消任何錄音；請稍後再試。';
+16:   end if;
+17: end;
+18: $$;
+19: revoke all on function public.ts_prepare_class_delete(uuid) from public, anon, authenticated;
+20: grant execute on function public.ts_prepare_class_delete(uuid) to service_role;
+21: notify pgrst, 'reload schema';
+22: commit;

@@ -304,7 +304,7 @@ Deno.serve(async (req) => {
           const files = check(
             await db.storage
               .from("ten-second-audio")
-              .list(prefix, { limit: 100, offset }),
+              .list(prefix, { limit: 100, offset, sortBy: { column: "name", order: "asc" } }),
           );
           for (const f of files) {
             const path = prefix + "/" + f.name;
@@ -319,13 +319,19 @@ Deno.serve(async (req) => {
       if (prepared.error?.code === "P0001")
         throw Error("仍有錄音在處理，未刪除或取消任何錄音；請稍後再試。");
       check(prepared);
-      const paths = await collect(id);
-      for (let i = 0; i < paths.length; i += 100)
-        check(
-          await db.storage
-            .from("ten-second-audio")
-            .remove(paths.slice(i, i + 100)),
-        );
+      // A concurrent retired-file cleanup can shift offset pages. Re-list from
+      // zero after each removal pass before deleting the class metadata.
+      for (let pass = 0; ; pass++) {
+        const paths = await collect(id);
+        if (!paths.length) break;
+        if (pass === 5) throw Error("錄音檔仍在清理，請稍後再按刪除課堂。");
+        for (let i = 0; i < paths.length; i += 100)
+          check(
+            await db.storage
+              .from("ten-second-audio")
+              .remove(paths.slice(i, i + 100)),
+          );
+      }
       check(await db.from("ts_classes").delete().eq("id", id));
       return reply({ ok: true });
     }

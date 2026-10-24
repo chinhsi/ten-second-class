@@ -1,0 +1,550 @@
+獨立程式複核：不要使用工具、讀檔、寫檔、規劃或修改。只看附上的當前程式。最多3個具體可重現的bug，列位置、觸發順序、影響、既有防護為何無效及最小修法；沒有確認問題就明說，不湊數。直接交完整繁體中文結論，800字內；不要長篇推理。基線d660131。
+範圍：錄音擷取失敗後釋放題目、兩分頁同版本不同音檔的暫存與重試。後端按version CAS且路徑不可覆寫；每次upload_ticket/submit_saved包含SHA256，已收件也比較內容，任何不一致回錯不接受。discard會原子換版，STALE或ALREADY_RECEIVED只允許刪本機對應檔。Student依scope的pendingRecordings輪詢選題，onCaptureFailed清recordingQuestion。請特別查非同步生命週期與錄音版本是否會誤刪／誤報收件。
+
+FILE src/main.tsx
+1240:           </p>
+1241:           {q ? (
+1242:             <Recorder
+1243:               key={q.id}
+1244:               q={q}
+1245:               scope={scope}
+1246:               lang={lang}
+1247:               call={call}
+1248:               response={state?.responses.find(
+1249:                 (r: any) => r.question_id === q.id,
+1250:               )}
+1251:               onRecording={() => setRecordingQuestion(q)}
+1252:               onCaptureFailed={() => setRecordingQuestion(null)}
+1253:               onDiscard={async () => {
+1254:                 await refresh();
+1255:                 setRecordingQuestion(null);
+1256:                 // Removing sessionStorage alone does not trigger a parent render.
+1257:                 setState((current: any) => ({ ...current }));
+1258:               }}
+1259:               onSubmitted={async () => {
+1260:                 await refresh();
+1261:                 setRecordingQuestion(null);
+1262:               }}
+1263:             />
+1264:           ) : (
+1265:             <div className="card waiting">
+1266:               <div className="orb">◉</div>
+1267:               <h2>
+
+FILE src/main.tsx
+1329: function Recorder({
+1330:   q,
+1331:   scope,
+1332:   lang,
+1333:   call,
+1334:   response,
+1335:   onSubmitted,
+1336:   onRecording,
+1337:   onDiscard,
+1338:   onCaptureFailed,
+1339: }: {
+1340:   q: any;
+1341:   scope: string;
+1342:   lang: "en" | "zh";
+1343:   call: (a: string, b?: any) => Promise<any>;
+1344:   response: any;
+1345:   onSubmitted: () => Promise<void>;
+1346:   onRecording: () => void;
+1347:   onDiscard: () => Promise<void>;
+1348:   onCaptureFailed: () => void;
+1349: }) {
+1350:   const t = (en: string, zh: string) => tx(lang, en, zh);
+1351:   const [phase, setPhase] = useState(() =>
+1352:     savedRecording(q.id) ? "retry" : "idle",
+1353:   );
+1354:   const limit = q.max_seconds === 120 ? 120 : q.max_seconds === 20 ? 20 : 10;
+1355:   const [left, setLeft] = useState(limit);
+1356:   const [restoreTick, setRestoreTick] = useState(0);
+1357:   const [error, setError] = useState("");
+1358:   const [pending, setPending] = useState<string | SavedRecording | null>(() =>
+1359:     savedRecording(q.id) === "idb" ? null : savedRecording(q.id),
+1360:   );
+1361:   useEffect(() => {
+1362:     if (limit !== 120) return;
+1363:     let cancelled = false;
+1364:     setPhase("restoring");
+1365:     loadRecording(scope, q.id, response?.recording_version)
+1366:       .then((blob) => {
+1367:         if (cancelled) return;
+1368:         if (blob) {
+1369:           setPending(blob);
+1370:           setPhase("retry");
+1371:         } else setPhase("idle");
+1372:       })
+1373:       .catch(() => {
+1374:         if (!cancelled) {
+1375:           setError(
+1376:             "讀取錄音暫存失敗，請重試，勿重新錄製。 / Could not restore recording; retry first.",
+1377:           );
+1378:           setPhase("restore_failed");
+1379:         }
+1380:       });
+1381:     return () => {
+1382:       cancelled = true;
+1383:     };
+1384:   }, [q.id, scope, restoreTick]);
+1385:   const recorder = useRef<MediaRecorder | null>(null);
+1386:   const stream = useRef<MediaStream | null>(null);
+1387:   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+1388:   const alive = useRef(true);
+1389:   useEffect(() => {
+1390:     alive.current = true;
+1391:     return () => {
+1392:       alive.current = false;
+1393:       if (timer.current) clearInterval(timer.current);
+1394:       if (recorder.current?.state === "recording") recorder.current.stop();
+1395:       stream.current?.getTracks().forEach((t) => t.stop());
+1396:     };
+1397:   }, []);
+1398:   async function upload(audio: string | SavedRecording) {
+1399:     setPhase("sending");
+1400:     try {
+1401:       if (typeof audio !== "string") {
+1402:         if (audio.nextVersion)
+1403:           throw Error("捨棄尚未確認，請再按捨棄完成確認，不能提交舊錄音。");
+1404:         const digest = audio.digest || (await audioDigest(audio.blob));
+1405:         const ticket = await call("upload_ticket", {
+1406:           digest,
+1407:           questionId: q.id,
+1408:           version: audio.version,
+1409:         });
+1410:         if (!ticket.received) {
+1411:           if (!ticket.uploaded) {
+1412:             const uploaded = await fetch(ticket.signedUrl, {
+1413:               method: "PUT",
+1414:               headers: { "Content-Type": "audio/wav" },
+1415:               body: audio.blob,
+1416:               signal: AbortSignal.timeout(60000),
+1417:             });
+1418:             if (
+1419:               !uploaded.ok &&
+1420:               uploaded.status !== 409 &&
+1421:               uploaded.status !== 400
+1422:             )
+1423:               throw Error(
+1424:                 "錄音上傳未完成，請按重新上傳 / Upload failed; please retry.",
+1425:               );
+1426:           }
+1427:           // A lost first acknowledgement can leave an immutable file already
+1428:           // stored. Confirmation validates that file, never overwrites it.
+1429:           await call("submit_saved", {
+1430:             digest,
+1431:             questionId: q.id,
+1432:             version: audio.version,
+1433:           });
+1434:         }
+1435:         await deleteRecording(scope, q.id, audio).catch(() => {});
+1436:       } else await call("submit", { questionId: q.id, audio });
+1437:       setPhase("sent");
+1438:       setPending(null);
+1439:       try {
+1440:         sessionStorage.removeItem(pendingKey(q.id));
+1441:       } catch {}
+1442:       await onSubmitted();
+1443:     } catch (e) {
+1444:       setError((e as Error).message);
+1445:       setPhase("retry");
+1446:     }
+1447:   }
+1448:   async function start() {
+1449:     setError("");
+1450:     setPhase("permission");
+1451:     try {
+1452:       if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder)
+1453:         throw Error(
+1454:           "This browser does not support recording. Please use Safari or Chrome.",
+1455:         );
+1456:       stream.current = await navigator.mediaDevices.getUserMedia({
+1457:         audio: { echoCancellation: true, noiseSuppression: true },
+1458:         video: false,
+1459:       });
+1460:       if (!alive.current) {
+1461:         stream.current.getTracks().forEach((t) => t.stop());
+1462:         return;
+1463:       }
+1464:       const ticket = await call("start", { questionId: q.id });
+1465:       if (!alive.current) {
+1466:         stream.current.getTracks().forEach((t) => t.stop());
+1467:         return;
+1468:       }
+1469:       if (Date.now() - Date.parse(ticket.started_at) > 110000)
+1470:         throw Error(
+1471:           "This recording ticket has expired. Please tell your teacher.",
+1472:         );
+1473:       const chunks: Blob[] = [];
+1474:       const type = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm"].find(
+1475:         (t) => MediaRecorder.isTypeSupported(t),
+1476:       );
+1477:       const rec = new MediaRecorder(
+1478:         stream.current,
+1479:         type ? { mimeType: type } : {},
+1480:       );
+1481:       recorder.current = rec;
+1482:       rec.ondataavailable = (e) => {
+1483:         if (e.data.size) chunks.push(e.data);
+1484:       };
+1485:       let captureFailed = false;
+1486:       rec.onerror = () => {
+1487:         captureFailed = true;
+1488:         onCaptureFailed();
+1489:         setError("Recording failed. Please check your microphone.");
+1490:         setPhase("idle");
+1491:         stream.current?.getTracks().forEach((t) => t.stop());
+1492:         if (timer.current) clearInterval(timer.current);
+1493:       };
+1494:       rec.onstop = async () => {
+1495:         if (captureFailed) return;
+1496:         if (timer.current) clearInterval(timer.current);
+1497:         stream.current?.getTracks().forEach((t) => t.stop());
+1498:         try {
+1499:           const wav = await recordingToWav(
+1500:             new Blob(chunks, { type: rec.mimeType }),
+1501:             limit,
+1502:           );
+1503:           if (wav.size < 8044) throw Error("Please say at least one sentence.");
+1504:           if (limit === 120) {
+1505:             const saved: SavedRecording = {
+1506:               blob: wav,
+1507:               digest: await audioDigest(wav),
+1508:               version: ticket.recording_version,
+1509:               responseId: ticket.id,
+1510:             };
+1511:             setPending(saved);
+1512:             try {
+1513:               await saveRecording(scope, q.id, saved);
+1514:             } catch {
+1515:               setError(
+1516:                 "暫存未完成，請保持本頁開啟直到上傳成功。 / Keep this page open until upload succeeds.",
+1517:               );
+1518:             }
+1519:             await upload(saved);
+1520:             return;
+1521:           }
+1522:           const bytes = new Uint8Array(await wav.arrayBuffer());
+1523:           let bin = "";
+1524:           for (const b of bytes) bin += String.fromCharCode(b);
+1525:           const audio = btoa(bin);
+1526:           setPending(audio);
+1527:           try {
+1528:             sessionStorage.setItem(pendingKey(q.id), audio);
+1529:           } catch {
+1530:             setError(
+1531:               "Browser storage is full. Keep this page open until upload finishes.",
+1532:             );
+1533:           }
+1534:           await upload(audio);
+1535:         } catch (e) {
+1536:           setError((e as Error).message);
+1537:           setPhase("idle");
+1538:           onCaptureFailed();
+1539:         }
+1540:       };
+1541:       rec.start();
+1542:       onRecording();
+1543:       setPhase("recording");
+1544:       const at = performance.now();
+1545:       timer.current = setInterval(() => {
+1546:         const rest = Math.max(0, limit - (performance.now() - at) / 1000);
+1547:         setLeft(rest);
+1548:         if (rest === 0 && rec.state === "recording") rec.stop();
+1549:       }, 50);
+1550:     } catch (e) {
+1551:       stream.current?.getTracks().forEach((t) => t.stop());
+1552:       setError((e as Error).message);
+1553:       setPhase("idle");
+1554:       onCaptureFailed();
+1555:     }
+1556:   }
+1557:   const submitted =
+1558:     (!pending &&
+1559:       !["recording", "sending", "retry", "restoring"].includes(phase) &&
+1560:       response &&
+1561:       response.status !== "recording") ||
+1562:     phase === "sent";
+1563:   return (
+1564:     <section className="card record-card">
+1565:       <span className="pill">
+1566:         {q.mode === "answer"
+1567:           ? t("Concept response", "概念作答")
+1568:           : t("Pronunciation", "朗讀發音")}{" "}
+1569:         · {t(`up to ${limit} seconds`, `最多 ${limit} 秒`)}
+1570:       </span>
+1571:       <h2>{q.prompt}</h2>
+1572:       {submitted ? (
+1573:         <div className="received">
+1574:           ✓ {t("Recording received", "已收到你的錄音")}
+1575:           <p>
+1576:             {t(
+1577:               "Your result will appear below automatically.",
+1578:               "回饋會自動出現在下方。",
+1579:             )}
+1580:           </p>
+1581:         </div>
+1582:       ) : (
+1583:         <>
+1584:           <div className={"countdown " + (phase === "recording" ? "live" : "")}>
+1585:             <strong>{Math.ceil(left)}</strong>
+1586:             <span>{t("sec", "秒")}</span>
+1587:           </div>
+1588:           {phase === "recording" ? (
+1589:             <button
+1590:               className="record-button stop"
+1591:               onClick={() => recorder.current?.stop()}
+1592:             >
+1593:               ■ {t("Submit early", "提早送出")}
+1594:             </button>
+1595:           ) : phase === "retry" ? (
+1596:             <button
+1597:               className="record-button"
+1598:               onClick={() => pending && upload(pending)}
+1599:             >
+1600:               {t("Upload this recording again", "重新上傳這段錄音")}
+1601:             </button>
+1602:           ) : (
+1603:             <button
+1604:               className="record-button"
+1605:               disabled={phase !== "idle" && phase !== "restore_failed"}
+1606:               onClick={() =>
+1607:                 phase === "restore_failed"
+1608:                   ? setRestoreTick((x) => x + 1)
+1609:                   : start()
+1610:               }
+1611:             >
+1612:               {phase === "restore_failed"
+1613:                 ? t("Retry restoring recording", "重試讀取錄音")
+1614:                 : phase === "permission"
+1615:                   ? t("Opening microphone…", "正在開啟麥克風…")
+1616:                   : phase === "sending"
+1617:                     ? t("Uploading…", "正在送出…")
+1618:                     : t("● Start recording", "● 開始錄音")}
+1619:             </button>
+1620:           )}
+1621:           {phase === "retry" && (
+1622:             <button
+1623:               className="quiet"
+1624:               onClick={async () => {
+1625:                 if (
+1626:                   !confirm(t("Discard this recording?", "確定捨棄這段錄音？"))
+1627:                 )
+1628:                   return;
+1629:                 setPhase("discarding");
+1630:                 try {
+1631:                   if (pending && typeof pending !== "string") {
+1632:                     const intent = {
+1633:                       ...pending,
+1634:                       nextVersion: pending.nextVersion || crypto.randomUUID(),
+1635:                     };
+1636:                     setPending(intent);
+1637:                     // Persist intent before the network call; a lost ACK/reload
+1638:                     // retries the same rotation rather than invalidating a new take.
+1639:                     await saveRecording(scope, q.id, intent);
+1640:                     try {
+1641:                       await call("discard_recording", {
+1642:                         questionId: q.id,
+1643:                         version: intent.version,
+1644:                         nextVersion: intent.nextVersion,
+1645:                       });
+1646:                     } catch (e) {
+1647:                       // Server has confirmed this version is retired or accepted.
+1648:                       // Delete only this local version, never another tab's new take.
+1649:                       if (
+1650:                         !["STALE_RECORDING", "ALREADY_RECEIVED"].includes(
+1651:                           (e as any).code,
+1652:                         )
+1653:                       )
+1654:                         throw e;
+1655:                     }
+1656:                     await deleteRecording(scope, q.id, intent);
+1657:                   }
+1658:                   sessionStorage.removeItem(pendingKey(q.id));
+1659:                   const remaining =
+1660:                     limit === 120
+1661:                       ? await loadRecording(
+1662:                           scope,
+1663:                           q.id,
+1664:                           response?.recording_version,
+1665:                         )
+1666:                       : null;
+1667:                   setPending(remaining || null);
+1668:                   setPhase(remaining ? "retry" : "idle");
+1669:                   setError("");
+1670:                   await onDiscard();
+1671:                 } catch (e) {
+1672:                   setError((e as Error).message);
+1673:                   setPhase("retry");
+1674:                 }
+1675:               }}
+1676:             >
+1677:               {t("Discard and continue", "捨棄錄音，繼續下一題")}
+1678:             </button>
+1679:           )}
+1680:           <p className="muted">
+1681:             {t(
+1682:               `The countdown starts when you press the button. It submits automatically at ${limit} seconds.`,
+1683:               `按下後開始倒數，${limit} 秒到自動送出。`,
+1684:             )}
+1685:           </p>
+1686:         </>
+1687:       )}
+1688:       {error && (
+1689:         <p role="alert" className="error">
+1690:           {error}
+1691:         </p>
+
+FILE src/recordingStore.ts
+1: // Scope to classroom + browser student identity. Never infer ownership of old,
+2: // unscoped blobs created by an earlier app version.
+3: export type SavedRecording = {
+4:   blob: Blob;
+5:   version: string | null;
+6:   responseId: string;
+7:   nextVersion?: string;
+8:   digest?: string;
+9: };
+10: const key = (scope: string, id: string, value: SavedRecording) =>
+11:   JSON.stringify([
+12:     scope,
+13:     id,
+14:     value.responseId,
+15:     value.version,
+16:     ...(value.digest ? [value.digest] : []),
+17:   ]);
+18: const open = () =>
+19:   new Promise<IDBDatabase>((resolve, reject) => {
+20:     const r = indexedDB.open("ten-second-recordings", 1);
+21:     r.onupgradeneeded = () => r.result.createObjectStore("pending");
+22:     r.onsuccess = () => resolve(r.result);
+23:     r.onerror = () => reject(r.error);
+24:     r.onblocked = () => reject(Error("請關閉其他舊版課堂分頁後重試"));
+25:   });
+26: async function transact<T>(
+27:   mode: IDBTransactionMode,
+28:   operation: (s: IDBObjectStore) => IDBRequest<T>,
+29: ): Promise<T> {
+30:   const db = await open();
+31:   return new Promise((resolve, reject) => {
+32:     const tx = db.transaction("pending", mode);
+33:     const request = operation(tx.objectStore("pending"));
+34:     tx.oncomplete = () => {
+35:       db.close();
+36:       resolve(request.result);
+37:     };
+38:     tx.onerror = tx.onabort = () => {
+39:       db.close();
+40:       reject(tx.error || request.error);
+41:     };
+42:   });
+43: }
+44: export const saveRecording = (
+45:   scope: string,
+46:   id: string,
+47:   value: SavedRecording,
+48: ) => transact("readwrite", (s) => s.put(value, key(scope, id, value)));
+49: export async function loadRecording(
+50:   scope: string,
+51:   id: string,
+52:   preferredVersion?: string | null,
+53: ): Promise<SavedRecording | undefined> {
+54:   const keys = await transact("readonly", (s) => s.getAllKeys());
+55:   const matches = keys.filter((k) => {
+56:     try {
+57:       const p = JSON.parse(String(k));
+58:       return (
+59:         Array.isArray(p) &&
+60:         (p.length === 4 || p.length === 5) &&
+61:         p[0] === scope &&
+62:         p[1] === id
+63:       );
+64:     } catch {
+65:       return false;
+66:     }
+67:   });
+68:   const selected =
+69:     matches.find((k) => JSON.parse(String(k))[3] === preferredVersion) ??
+70:     matches.at(-1);
+71:   return selected === undefined
+72:     ? undefined
+73:     : transact("readonly", (s) => s.get(selected));
+74: }
+75: export async function pendingRecordings(scope: string): Promise<string[]> {
+76:   const keys = await transact("readonly", (s) => s.getAllKeys());
+77:   return keys.flatMap((k) => {
+78:     try {
+79:       const pair = JSON.parse(String(k));
+80:       return Array.isArray(pair) &&
+81:         (pair.length === 4 || pair.length === 5) &&
+82:         pair[0] === scope &&
+83:         typeof pair[1] === "string"
+84:         ? [pair[1]]
+85:         : [];
+86:     } catch {
+87:       return [];
+88:     }
+89:   });
+90: }
+91: // A late acknowledgement from another tab must not erase a newer recording.
+92: export async function deleteRecording(
+93:   scope: string,
+94:   id: string,
+95:   expected: SavedRecording,
+96: ): Promise<void> {
+97:   const db = await open();
+98:   return new Promise((resolve, reject) => {
+99:     const tx = db.transaction("pending", "readwrite");
+100:     const s = tx.objectStore("pending");
+101:     const r = s.get(key(scope, id, expected));
+102:     r.onsuccess = () => {
+103:       const current = r.result as SavedRecording | undefined;
+104:       if (
+105:         current?.version === expected.version &&
+106:         current?.responseId === expected.responseId
+107:       )
+108:         s.delete(key(scope, id, expected));
+109:     };
+110:     tx.oncomplete = () => {
+111:       db.close();
+112:       resolve();
+113:     };
+114:     tx.onerror = tx.onabort = () => {
+115:       db.close();
+116:       reject(tx.error);
+117:     };
+118:   });
+119: }
+
+FILE src/recordingSelection.ts
+1: export function selectRecordingQuestion(
+2:   state: any,
+3:   recordingQuestion: any,
+4:   pendingIds: string[],
+5:   savedShort: (id: string) => unknown,
+6: ) {
+7:   return (
+8:     recordingQuestion ||
+9:     state?.questions.find(
+10:       (q: any) =>
+11:         pendingIds.includes(q.id) ||
+12:         (q.max_seconds !== 120 &&
+13:           savedShort(q.id) &&
+14:           !state.responses.some(
+15:             (r: any) => r.question_id === q.id && r.status !== "recording",
+16:           )),
+17:     ) ||
+18:     (state?.class.status === "active"
+19:       ? state.questions.find((q: any) => q.status === "active")
+20:       : null)
+21:   );
+22: }
+
+FILE src/audioDigest.ts
+1: export async function audioDigest(blob: Blob): Promise<string> {
+2:   const hash = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
+3:   return Array.from(new Uint8Array(hash), (x) =>
+4:     x.toString(16).padStart(2, "0"),
+5:   ).join("");
+6: }

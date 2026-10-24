@@ -1,0 +1,71 @@
+{
+  "commit": "d660131",
+  "model": "gemini-4-argon-low",
+  "effort": "low",
+  "mode": "default",
+  "parts": {
+    "frontend": {
+      "input_sha256": "c3260cc113fa54e1bbf401d198841d2d73d13840a9d2edfd9a49fa81da82605d",
+      "ranges": [
+        [
+          "src/main.tsx",
+          1240,
+          1267
+        ],
+        [
+          "src/main.tsx",
+          1329,
+          1691
+        ],
+        [
+          "src/recordingStore.ts",
+          1,
+          1000
+        ],
+        [
+          "src/recordingSelection.ts",
+          1,
+          1000
+        ],
+        [
+          "src/audioDigest.ts",
+          1,
+          1000
+        ]
+      ],
+      "conversation_id": "0ed08e3b-7f70-479c-8577-346cc0962f68",
+      "status": "SUCCESS",
+      "duration_seconds": 29.282296,
+      "actual_model": "gemini-4-argon-low"
+    },
+    "backend": {
+      "input_sha256": "b3d41285a6091ee2fd1fe1c1a311be0eb4688e65d6c8680d782fe6a9d3b81b98",
+      "ranges": [
+        [
+          "supabase/functions/ten-second/index.ts",
+          298,
+          338
+        ],
+        [
+          "supabase/functions/ten-second/index.ts",
+          783,
+          1018
+        ],
+        [
+          "supabase/functions/ten-second/recordingVersion.ts",
+          1,
+          1000
+        ],
+        [
+          "supabase/migrations/20261024041016_safe_class_delete.sql",
+          1,
+          1000
+        ]
+      ],
+      "conversation_id": "565e19ae-4f24-44da-8b60-a10ffcc80b8c",
+      "status": "SUCCESS",
+      "duration_seconds": 27.190577,
+      "actual_model": "gemini-4-argon-low"
+    }
+  }
+}

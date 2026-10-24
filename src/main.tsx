@@ -1439,7 +1439,13 @@ function Recorder({
       try {
         sessionStorage.removeItem(pendingKey(q.id));
       } catch {}
-      await onSubmitted();
+      try {
+        await onSubmitted();
+      } catch {
+        setError(
+          "錄音已收件，課堂狀態暫未更新；請稍候自動更新。 / Recording received; waiting for classroom updates.",
+        );
+      }
     } catch (e) {
       setError((e as Error).message);
       setPhase("retry");

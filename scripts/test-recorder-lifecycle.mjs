@@ -48,4 +48,10 @@ assert.ok(retry(),'Pending local content remains reachable despite server done')
 await act(async()=>{await retry().props.onClick()});
 assert.equal(sentDigest,restored.digest);assert.equal(deleted,0);assert.equal(received,0);assert.ok(retry());
 await act(async()=>view.unmount());
-console.log('PASS: real Recorder too-short/microphone failures release question; conflicting second take stays recoverable after server done. No browser.');
+await act(async()=>{view=create(React.createElement(Recorder,{...props,q:{...q,max_seconds:120},call:async()=>({received:true}),onSubmitted:async()=>{throw Error('offline refresh')}}))});
+await act(async()=>{await retry().props.onClick()});
+assert.equal(deleted,1,'Accepted recording is removed once');
+assert.equal(retry(),undefined,'Failed refresh must not expose a retry with no recording');
+assert.ok(JSON.stringify(view.toJSON()).includes('已收到你的錄音'));
+await act(async()=>view.unmount());
+console.log('PASS: capture failure release; conflicting content preserved; accepted recording stays received after refresh failure. No browser.');
