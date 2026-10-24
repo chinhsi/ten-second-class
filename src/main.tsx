@@ -171,6 +171,7 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
   const [admin, setAdmin] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [teachingFocus, setTeachingFocus] = useState(false);
+  const [discussionExpanded, setDiscussionExpanded] = useState(false);
   const [allowLongRecordings, setAllowLongRecordings] = useState(false);
   const [classes, setClasses] = useState<any[]>([]);
   const [cls, setCls] = useState<any>(null);
@@ -994,18 +995,6 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
                   <span>{t("Not answered", "本題未答")}</span>
                 </div>
               </div>
-              {question && (
-                <Discussion
-                  key={cls.id + question.id}
-                  question={question}
-                  members={d.members}
-                  responses={responses}
-                  summaries={d.summaries || []}
-                  lang={lang}
-                  call={call}
-                  stopAudio={() => setAudio("")}
-                />
-              )}
               <div className="actions filters">
                 <button
                   className="secondary"
@@ -1068,8 +1057,8 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
                 />
               )}
               <div className="table-wrap">
-                <table>
-                  <thead>
+                <table className="responses-table" role="table">
+                  <thead role="rowgroup">
                     <tr>
                       <th>{t("Student", "學生")}</th>
                       <th>{t("Status", "狀態")}</th>
@@ -1078,7 +1067,7 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
                       <th>{t("Audio", "錄音")}</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody role="rowgroup">
                     {d.members
                       .filter((m: any) =>
                         tab === "missing"
@@ -1096,12 +1085,18 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
                           (r: any) => r.member_id === m.id,
                         );
                         return (
-                          <tr key={m.id}>
-                            <td>
+                          <tr key={m.id} role="row">
+                            <td role="cell">
+                              <span className="mobile-field-label">
+                                {t("Student", "學生")}
+                              </span>
                               <strong>{m.name}</strong>
                               <small>{m.student_id}</small>
                             </td>
-                            <td>
+                            <td role="cell">
+                              <span className="mobile-field-label">
+                                {t("Status", "狀態")}
+                              </span>
                               <span
                                 className={
                                   "pill " +
@@ -1113,19 +1108,28 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
                                   : statusLabel(r?.status, lang)}
                               </span>
                             </td>
-                            <td>
+                            <td role="cell">
+                              <span className="mobile-field-label">
+                                {t("Score", "分數")}
+                              </span>
                               {r?.result?.score != null
                                 ? `${r.result.score}/5`
                                 : "—"}
                             </td>
-                            <td>
+                            <td role="cell">
+                              <span className="mobile-field-label">
+                                {t("Feedback and transcript", "回饋與原話")}
+                              </span>
                               {r?.result?.feedback}
-                              <small className="response-transcript">
+                              <div className="response-transcript">
                                 {r?.result?.transcript &&
                                   `「${r.result.transcript}」`}
-                              </small>
+                              </div>
                             </td>
-                            <td>
+                            <td role="cell">
+                              <span className="mobile-field-label">
+                                {t("Audio", "錄音")}
+                              </span>
                               {r?.path && (
                                 <button
                                   className="quiet"
@@ -1162,6 +1166,40 @@ function Teacher({ lang }: { lang: "en" | "zh" }) {
                   </tbody>
                 </table>
               </div>
+              {question && (
+                <section className="discussion-tools">
+                  {teachingFocus && (
+                    <button
+                      className="secondary"
+                      aria-expanded={discussionExpanded}
+                      aria-controls="discussion-tools-body"
+                      onClick={() => setDiscussionExpanded(!discussionExpanded)}
+                    >
+                      {discussionExpanded
+                        ? t("Hide discussion tools", "收起討論工具")
+                        : t(
+                            "Show summary, concept cloud and presentation",
+                            "展開摘要、概念雲及抽選展示",
+                          )}
+                    </button>
+                  )}
+                  <div
+                    id="discussion-tools-body"
+                    hidden={teachingFocus && !discussionExpanded}
+                  >
+                    <Discussion
+                      key={cls.id + question.id}
+                      question={question}
+                      members={d.members}
+                      responses={responses}
+                      summaries={d.summaries || []}
+                      lang={lang}
+                      call={call}
+                      stopAudio={() => setAudio("")}
+                    />
+                  </div>
+                </section>
+              )}
               {!d.members.length && (
                 <p className="empty">
                   Students will appear here after joining.

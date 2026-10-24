@@ -1087,3 +1087,55 @@ header .guide-link {
     min-width: 0;
   }
 }
+
+.discussion-tools {
+  margin-top: 24px;
+}
+.mobile-field-label {
+  display: none;
+}
+.response-transcript {
+  margin-top: 4px;
+}
+@media (max-width: 720px) {
+  .responses-table,
+  .responses-table tbody {
+    display: block;
+    width: 100%;
+  }
+  .responses-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .responses-table tr {
+    display: block;
+    padding: 16px;
+    margin-bottom: 16px;
+    border: 1px solid #dedfd4;
+    border-radius: 12px;
+    background: #fffefa;
+  }
+  .responses-table td {
+    display: block;
+    width: auto;
+    min-width: 0;
+    padding: 6px 0;
+    border: 0;
+    overflow-wrap: anywhere;
+  }
+  .responses-table .mobile-field-label {
+    display: block;
+    font-size: 12px;
+    color: #53655a;
+    margin-bottom: 4px;
+  }
+  .responses-table .response-transcript {
+    font-size: 16px;
+    line-height: 1.7;
+  }
+}
