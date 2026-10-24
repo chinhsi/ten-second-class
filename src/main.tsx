@@ -1251,14 +1251,27 @@ function Student({ code, lang }: { code: string; lang: "en" | "zh" }) {
               onRecording={() => setRecordingQuestion(q)}
               onCaptureFailed={() => setRecordingQuestion(null)}
               onDiscard={async () => {
-                await refresh();
-                setRecordingQuestion(null);
-                // Removing sessionStorage alone does not trigger a parent render.
-                setState((current: any) => ({ ...current }));
+                try {
+                  await refresh();
+                } catch {
+                  // Discard already succeeded; do not offer upload retry for it.
+                  setError(t(
+                    "Recording discarded; waiting for classroom updates.",
+                    "錄音已捨棄，課堂狀態暫未更新；請稍候自動更新。",
+                  ));
+                } finally {
+                  setRecordingQuestion(null);
+                  // Removing sessionStorage alone does not trigger a parent render.
+                  setState((current: any) => current && ({ ...current }));
+                }
               }}
               onSubmitted={async () => {
-                await refresh();
-                setRecordingQuestion(null);
+                try {
+                  await refresh();
+                } finally {
+                  // Receipt is final even when the classroom refresh fails.
+                  setRecordingQuestion(null);
+                }
               }}
             />
           ) : (

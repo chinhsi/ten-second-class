@@ -165,5 +165,60 @@
     },
     "delivery_status": "awaiting_content_review",
     "elapsed_seconds": 11.7
+  },
+  {
+    "study_id": "post-gemini",
+    "status": "completed",
+    "actual_cost": 0.047186,
+    "request_sha256": "101c3e6c24cc9238cde549c94e7baf961e931d6f46fba3814885cd6a6a2020ef",
+    "source_files_sha256": {
+      "/Users/chinhsi/ten-second-class/reviews/sonnet-2026-10-24/post-gemini/source.txt": "5e260c166ce2b1e80340f3f7758f52d0e8a291afa41395b84ffdf3f09c468837"
+    },
+    "model": "anthropic/claude-sonnet-5.5",
+    "upper_bound_usd": 0.214598,
+    "prior_spent_usd": 0.424874,
+    "budget_usd": 0.674874,
+    "gateway": "autoresearch.task_openrouter",
+    "delivery_plan": {
+      "scope": "Three critical fixes only: received state, INSERT/delete lock ordering, storage cleanup pagination",
+      "max_input_chars": 40000,
+      "expected_answer_tokens": 1800,
+      "reasoning_allowance_tokens": 12000,
+      "capacity_rationale": "Small focused code packet, low effort, 16384 total; worst-case must fit USD0.25 incremental cap.",
+      "actual_input_chars": 22038,
+      "reservation_guaranteed": false
+    },
+    "recovery": null,
+    "remaining_after_reservation_usd": 0.035402,
+    "sent_at": 1792825204.144906,
+    "actual_model": "anthropic/claude-sonnet-5.5",
+    "request_id": "gen-1792825205-QIRoPwrm6nWrVeZhhKrz",
+    "provider": "Anthropic",
+    "finish_reason": "stop",
+    "usage": {
+      "prompt_tokens": 8708,
+      "completion_tokens": 2977,
+      "total_tokens": 11685,
+      "cost": 0.047186,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0.047186,
+        "upstream_inference_prompt_cost": 0.017416,
+        "upstream_inference_completions_cost": 0.02977
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 1600,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "delivery_status": "awaiting_content_review",
+    "elapsed_seconds": 27.14
   }
 ]
